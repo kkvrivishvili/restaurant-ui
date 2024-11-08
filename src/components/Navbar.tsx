@@ -10,9 +10,9 @@ const Navbar = () => {
     <div className="h-12 text-red-500 p-4 flex items-center justify-between border-b-2 border-b-red-500 uppercase md:h-24 lg:px-20 xl:px-40">
       {/* LEFT LINKS */}
       <div className="hidden md:flex gap-4 flex-1">
-        <Link href="/">Homepage</Link>
+        <Link href="/">Home</Link>
         <Link href="/menu">Menu</Link>
-        <Link href="/">Contact</Link>
+        <Link href="/">Contacto</Link>
       </div>
       {/* LOGO */}
       <div className="text-xl md:font-bold flex-1 md:text-center">
@@ -29,9 +29,9 @@ const Navbar = () => {
           <span>123 456 78</span>
         </div>
         {!user ? (
-          <Link href="/login">Login</Link>
+          <Link href="/login">Ingreso</Link>
         ) : (
-          <Link href="/orders">Orders</Link>
+          <Link href="/orders">Ordenes</Link>
         )}
         <CartIcon />
       </div>

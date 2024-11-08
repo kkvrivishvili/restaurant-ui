@@ -42,7 +42,7 @@ const Price = ({ price, id, options }: Props) => {
       <div className="flex justify-between items-center">
         {/* QUANTITY */}
         <div className="flex justify-between w-full p-3 ring-1 ring-red-500">
-          <span>Quantity</span>
+          <span>Cantidad</span>
           <div className="flex gap-4 items-center">
             <button
               onClick={() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))}
@@ -59,7 +59,7 @@ const Price = ({ price, id, options }: Props) => {
         </div>
         {/* CART BUTTON */}
         <button className="uppercase w-56 bg-red-500 text-white p-3 ring-1 ring-red-500">
-          Add to Cart
+          Agregar al carrito
         </button>
       </div>
     </div>
