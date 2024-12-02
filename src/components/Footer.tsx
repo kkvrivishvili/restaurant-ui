@@ -1,12 +1,27 @@
 import Link from "next/link";
 import React from "react";
+import { Container } from "@/components/ui/container";
+import { cn } from "@/lib/utils";
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <div className="h-12 md:h-24 p-4 lg:px-20 xl:px-40 text-red-500 flex items-center justify-between">
-      <Link href="/" className="font-bold text-xl">MASSIMO</Link>
-      <p>Acuario © ALL RIGHTS RESERVED.</p>
-    </div>
+    <footer className="border-t">
+      <Container>
+        <div className="flex flex-col md:flex-row items-center justify-between py-6 md:py-8">
+          <Link 
+            href="/" 
+            className="text-xl font-bold text-foreground hover:text-primary transition-colors"
+          >
+            VERA
+          </Link>
+          <p className="text-sm text-muted-foreground mt-4 md:mt-0">
+            {currentYear} Vera Ecommerce. Todos los derechos reservados.
+          </p>
+        </div>
+      </Container>
+    </footer>
   );
 };
 

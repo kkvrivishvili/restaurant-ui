@@ -1,15 +1,41 @@
-import Image from "next/image";
-import Link from "next/link";
-import React from "react";
+'use client';
 
-const CartIcon = () => {
+import React from "react";
+import { ShoppingCart } from "lucide-react";
+import { useCart } from "@/context/CartContext";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+
+interface CartIconProps {
+  className?: string;
+  iconClassName?: string;
+}
+
+const CartIcon = ({
+  className,
+  iconClassName
+}: CartIconProps) => {
+  const { totalItems } = useCart();
+  
   return (
-    <Link href="/cart" className="flex items-center gap-4">
-      <div className="relative w-8 h-8 md:w-5 md:h-5">
-        <Image src="/cart.png" alt="" fill />
+    <div className={cn("flex items-center gap-4", className)}>
+      <div className="relative">
+        <ShoppingCart 
+          className={cn(
+            "h-6 w-6 text-foreground transition-colors hover:text-muted-foreground",
+            iconClassName
+          )} 
+        />
+        {totalItems > 0 && (
+          <Badge 
+            variant="destructive" 
+            className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px] font-medium"
+          >
+            {totalItems}
+          </Badge>
+        )}
       </div>
-      <span>Carrito (3)</span>
-    </Link>
+    </div>
   );
 };
 

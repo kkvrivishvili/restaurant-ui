@@ -1,50 +1,41 @@
-// WITH A LIBRARY
-// "use client"
-// import React from 'react'
-// import Countdown from 'react-countdown'
-
-// const endingDate = new Date("2023-07-25")
-
-// const CountDown = () => {
-//   return (
-//     <Countdown className='font-bold text-5xl text-yellow-300' date={endingDate}/>
-//   )
-// }
-
-// export default CountDown
-
-
-// WITHOUT A LIBRARY
 "use client"
-import React, { useState, useEffect } from "react";
 
-const CountDown = () => {
-  
-  let difference = +new Date(`10/10/2023`) - +new Date();
-  const [delay, setDelay] = useState(difference);
+import React from "react";
+import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/format";
+import { useCountdown } from "@/hooks/useCountdown";
 
-  const d = Math.floor(difference / (1000 * 60 * 60 * 24));
-  const h = Math.floor((difference / (1000 * 60 * 60)) % 24);
-  const m = Math.floor((difference / 1000 / 60) % 60);
-  const s = Math.floor((difference / 1000) % 60);
+interface CountDownProps {
+  targetDate: string | number | Date;
+  className?: string;
+}
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDelay(delay - 1);
-    }, 1000);
+const CountDown = ({ targetDate, className }: CountDownProps) => {
+  const timeLeft = useCountdown(targetDate);
 
-    if (delay === 0) {
-      clearInterval(timer);
-    }
+  if (timeLeft.total <= 0) {
+    return null;
+  }
 
-    return () => {
-      clearInterval(timer);
-    };
-  });
   return (
-    <span className="font-bold text-5xl text-yellow-300">
-      {d}:{h}:{m}:{s}
-    </span>
+    <div className={cn("grid grid-cols-4 gap-4", className)}>
+      <div className="flex flex-col items-center">
+        <span className="text-4xl font-bold text-primary">{formatNumber(timeLeft.days)}</span>
+        <span className="text-xs text-muted-foreground">Días</span>
+      </div>
+      <div className="flex flex-col items-center">
+        <span className="text-4xl font-bold text-primary">{formatNumber(timeLeft.hours)}</span>
+        <span className="text-xs text-muted-foreground">Horas</span>
+      </div>
+      <div className="flex flex-col items-center">
+        <span className="text-4xl font-bold text-primary">{formatNumber(timeLeft.minutes)}</span>
+        <span className="text-xs text-muted-foreground">Minutos</span>
+      </div>
+      <div className="flex flex-col items-center">
+        <span className="text-4xl font-bold text-primary">{formatNumber(timeLeft.seconds)}</span>
+        <span className="text-xs text-muted-foreground">Segundos</span>
+      </div>
+    </div>
   );
 };
 

@@ -1,0 +1,16 @@
+contrasenia supabase db:
+
+k52YTxQn6xnuYMIL
+
+
+proyect url:
+
+https://ixbnjfrtzfkgoxgskztx.supabase.co
+
+anon public key:
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Ym5qZnJ0emZrZ294Z3NrenR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMwNzUxMzksImV4cCI6MjA0ODY1MTEzOX0.-Uf-_WTQYBE9_AOdzq1Cmb-3pZsbc8EHZ2_Bzc1LvKM
+
+service_role
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Ym5qZnJ0emZrZ294Z3NrenR4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMzA3NTEzOSwiZXhwIjoyMDQ4NjUxMTM5fQ.r-D3K9DzbHQ_EPyDYf9HuywYzaPmb8YVpva2lahum4k

@@ -1,66 +1,138 @@
+/**
+ * CartPage: Página del carrito de compras
+ * 
+ * Funcionalidades:
+ * - Listado de productos en el carrito
+ * - Control de cantidad por producto
+ * - Cálculo de subtotal y total
+ * - Mensaje cuando el carrito está vacío
+ * 
+ * Hooks y Context:
+ * - useCart: Provee funcionalidades del carrito (@/context/CartContext.tsx)
+ *   - items: Productos en el carrito
+ *   - addToCart/removeFromCart: Modificar cantidades
+ *   - totalPrice: Precio total calculado
+ * 
+ * Formateo de precios:
+ * - Usa la función formatPrice para mostrar precios
+ * - Los precios se almacenan en centavos (dividir por 100)
+ * 
+ * Componentes UI:
+ * - Container: Layout container (@/components/ui/container.tsx)
+ * - Button: Botones de acción (@/components/ui/button.tsx)
+ * - Iconos de Lucide React
+ * 
+ * Estilos:
+ * - Usa Tailwind CSS para el diseño
+ * - Responsive en móvil y desktop
+ */
+
+'use client';
+
+import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import React from "react";
+import { Container } from "@/components/ui/container";
+import { Button } from "@/components/ui/button";
+import { ShoppingBag, Plus, Minus } from "lucide-react";
+
+const formatPrice = (price: number) => {
+  return `$${(price/100).toFixed(2)}`;
+};
 
 const CartPage = () => {
+  const { items, removeFromCart, addToCart, totalPrice } = useCart();
+
   return (
-    <div className="h-[calc(100vh-6rem)] md:h-[calc(100vh-9rem)] flex flex-col text-red-500 lg:flex-row">
-      {/* PRODUCTS CONTAINER */}
-      <div className="h-1/2 p-4 flex flex-col justify-center overflow-scroll lg:h-full lg:w-2/3 2xl:w-1/2 lg:px-20 xl:px-40">
-        {/* SINGLE ITEM */}
-        <div className="flex items-center justify-between mb-4">
-          <Image src="/temporary/p1.png" alt="" width={100} height={100} />
-          <div className="">
-            <h1 className="uppercase text-xl font-bold">sicilian</h1>
-            <span>Large</span>
-          </div>
-          <h2 className="font-bold">$79.90</h2>
-          <span className="cursor-pointer">X</span>
+    <Container className="py-8">
+      <h1 className="text-3xl font-bold mb-8">Tu Carrito</h1>
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* PRODUCTS CONTAINER */}
+        <div className="flex-1">
+          {items.length === 0 ? (
+            <div className="text-center py-16 bg-card rounded-lg border">
+              <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Tu carrito está vacío</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {items.map((item) => (
+                <div 
+                  className="flex items-center gap-4 p-4 bg-card rounded-lg border"
+                  key={item.id}
+                >
+                  <div className="relative w-24 h-24 overflow-hidden rounded-md">
+                    <Image
+                      src={item.img || "/temporary/p1.png"}
+                      alt={item.title}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="font-semibold text-lg text-foreground">{item.title}</h2>
+                    <p className="text-muted-foreground">{formatPrice(item.price)}</p>
+                  </div>
+                  {/* QUANTITY CONTROLS */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => removeFromCart(item.id)}
+                      className="h-8 w-8"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-8 text-center font-medium">{item.quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => addToCart(item.id)}
+                      className="h-8 w-8"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="text-right min-w-[80px]">
+                    <p className="font-medium text-foreground">
+                      {formatPrice(item.price * item.quantity)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {/* SINGLE ITEM */}
-        <div className="flex items-center justify-between mb-4">
-          <Image src="/temporary/p1.png" alt="" width={100} height={100} />
-          <div className="">
-            <h1 className="uppercase text-xl font-bold">sicilian</h1>
-            <span>Large</span>
+
+        {/* PAYMENT CONTAINER */}
+        {items.length > 0 && (
+          <div className="lg:w-[380px]">
+            <div className="bg-card rounded-lg border p-6 space-y-4">
+              <h2 className="font-semibold text-lg text-foreground">Resumen del Pedido</h2>
+              <div className="space-y-2">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal ({items.length} items)</span>
+                  <span>{formatPrice(totalPrice)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Envío</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">¡GRATIS!</span>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between font-medium text-foreground">
+                    <span>Total</span>
+                    <span>{formatPrice(totalPrice)}</span>
+                  </div>
+                </div>
+              </div>
+              <Button className="w-full" size="lg">
+                Proceder al Pago
+              </Button>
+            </div>
           </div>
-          <h2 className="font-bold">$79.90</h2>
-          <span className="cursor-pointer">X</span>
-        </div>
-        {/* SINGLE ITEM */}
-        <div className="flex items-center justify-between mb-4">
-          <Image src="/temporary/p1.png" alt="" width={100} height={100} />
-          <div className="">
-            <h1 className="uppercase text-xl font-bold">sicilian</h1>
-            <span>Large</span>
-          </div>
-          <h2 className="font-bold">$79.90</h2>
-          <span className="cursor-pointer">X</span>
-        </div>
+        )}
       </div>
-      {/* PAYMENT CONTAINER */}
-      <div className="h-1/2 p-4 bg-fuchsia-50 flex flex-col gap-4 justify-center lg:h-full lg:w-1/3 2xl:w-1/2 lg:px-20 xl:px-40 2xl:text-xl 2xl:gap-6">
-        <div className="flex justify-between">
-          <span className="">Subtotal (3 items)</span>
-          <span className="">$81.70</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="">Service Cost</span>
-          <span className="">$0.00</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="">Delivery Cost</span>
-          <span className="text-green-500">FREE!</span>
-        </div>
-        <hr className="my-2" />
-        <div className="flex justify-between">
-          <span className="">TOTAL(INCL. VAT)</span>
-          <span className="font-bold">$81.70</span>
-        </div>
-        <button className="bg-red-500 text-white p-3 rounded-md w-1/2 self-end">
-          CHECKOUT
-        </button>
-      </div>
-    </div>
+    </Container>
   );
 };
 

@@ -1,10 +1,26 @@
-import React from 'react'
+'use client';
 
-const Notification = () => {
-  return (
-    <div className='h-12 bg-red-500 text-white px-4 flex items-center justify-center text-center text-sm md:text-base cursor-pointer'>Free delivery para ordenes mayores a $15000. Ordena tu pedido ya!
-    </div>
-  )
-}
+import React, { useEffect } from 'react';
+import { Toaster } from '@/components/ui/toaster';
+import { useToast } from '@/components/ui/use-toast';
 
-export default Notification
+type NotificationType = {
+  message?: string;
+};
+
+const Notification = ({ message }: NotificationType) => {
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (message) {
+      toast({
+        description: message,
+        duration: 3000,
+      });
+    }
+  }, [message, toast]);
+
+  return <Toaster />;
+};
+
+export default Notification;
