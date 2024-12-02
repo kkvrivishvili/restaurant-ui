@@ -1,10 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import React from "react";
+import { usePathname } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { cn } from "@/lib/utils";
 
 const Footer = () => {
+  const pathname = usePathname();
   const currentYear = new Date().getFullYear();
+
+  // No mostrar el footer en las rutas de admin
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <footer className="border-t">

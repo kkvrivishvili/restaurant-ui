@@ -42,6 +42,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import CartIcon from "./CartIcon";
 import { User, Menu as MenuIcon } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -57,6 +58,13 @@ import { siteConfig } from "@/config/globals";
 import { Container } from "@/components/ui/container";
 
 const Navbar = () => {
+  const pathname = usePathname();
+  
+  // No mostrar el navbar en las rutas de admin
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   const { totalItems } = useCart();
 
   return (
