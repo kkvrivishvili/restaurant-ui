@@ -2,7 +2,7 @@
 
 import { products, APP_CONSTANTS } from "@/data";
 import Image from "next/image";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/hooks/use-cart";
 import { Flame, Clock, Star, BadgePercent, Award, Leaf } from "lucide-react";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
@@ -100,13 +100,6 @@ const Featured = () => {
                   </div>
                   <div
                     className="flex items-center gap-1 text-sm text-muted-foreground"
-                    title="Proteínas"
-                  >
-                    <Award className="w-4 h-4" />
-                    <span>{item.nutritionalInfo.protein}g prot</span>
-                  </div>
-                  <div
-                    className="flex items-center gap-1 text-sm text-muted-foreground"
                     title="Tiempo de preparación"
                   >
                     <Clock className="w-4 h-4" />
@@ -117,32 +110,40 @@ const Featured = () => {
                       className="flex items-center gap-1 text-sm text-muted-foreground"
                       title="Sin Gluten"
                     >
-                      <Leaf className="w-4 h-4" />
+                      <Award className="w-4 h-4" />
                       <span>Sin Gluten</span>
                     </div>
                   )}
+                  {item.dietaryInfo.isVegan && (
+                    <div
+                      className="flex items-center gap-1 text-sm text-muted-foreground"
+                      title="Vegano"
+                    >
+                      <Leaf className="w-4 h-4" />
+                      <span>Vegano</span>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
 
-              <CardFooter>
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-foreground">
-                      ${(item.price / 100).toFixed(2)}
-                    </span>
+                {/* Price */}
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-2xl font-bold">${item.price}</p>
                     {item.discount && (
-                      <span className="text-sm text-muted-foreground line-through">
-                        $
-                        {(
-                          (item.price * (1 + item.discount / 100)) /
-                          100
-                        ).toFixed(2)}
-                      </span>
+                      <p className="text-sm text-muted-foreground line-through">
+                        ${Math.round(item.price * (1 + item.discount / 100))}
+                      </p>
                     )}
                   </div>
-                  <Button onClick={() => addToCart(item.id)}>Agregar</Button>
+                  <Button
+                    onClick={() => addToCart(item)}
+                    size="sm"
+                    className="rounded-full"
+                  >
+                    Agregar
+                  </Button>
                 </div>
-              </CardFooter>
+              </CardContent>
             </Card>
           ))}
         </div>
