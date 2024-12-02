@@ -16,6 +16,8 @@
  * - rating: Calificación promedio
  * - reviews: Número de reseñas
  * - discount: Descuento (opcional)
+ * - stock: Cantidad en stock
+ * - isActive: Estado de activación del producto
  *
  * Categorías disponibles:
  * - protein
@@ -47,49 +49,45 @@ export const APP_CONSTANTS = {
   MIN_ORDER_AMOUNT: 4999,
   MAX_ITEMS_PER_ORDER: 20,
   DIETARY_TAGS: {
-    GLUTEN_FREE: "GLUTEN_FREE",
-    DAIRY_FREE: "DAIRY_FREE",
-    SOY_FREE: "SOY_FREE",
-    NUT_FREE: "NUT_FREE",
+    GLUTEN_FREE: "Sin Gluten",
+    DAIRY_FREE: "Sin Lácteos",
+    SOY_FREE: "Sin Soja",
+    NUT_FREE: "Sin Frutos Secos",
   },
   MEAL_TAGS: {
-    POPULAR: "POPULAR",
-    NEW: "NEW",
-    PROMOTION: "PROMOTION",
-    ATHLETE: "ATHLETE",
-    WEIGHT_LOSS: "WEIGHT_LOSS",
-    FAMILY_SIZE: "FAMILY_SIZE",
-    OFFICE: "OFFICE",
-    BESTSELLER: "BESTSELLER",
+    NEW_ARRIVAL: "Nuevo",
+    FEATURED: "Destacado",
+    SEASONAL: "De Temporada",
+  },
+  SIDE_DISHES: {
+    MASHED_POTATOES: "Puré de Papa",
+    MASHED_PUMPKIN: "Puré de Calabaza",
+    FRENCH_FRIES: "Papas Fritas",
+    ROASTED_VEGETABLES: "Verduras Asadas",
   },
   CATEGORIES: {
     PROTEIN: {
       id: "protein",
-      title: "Alto en Proteína",
-      color: "bg-blue-500",
+      title: "Alto en Proteína"
     },
     LOW_CARB: {
       id: "lowCarb",
-      title: "Bajo en Carbohidratos",
-      color: "bg-green-500",
+      title: "Bajo en Carbohidratos"
     },
     VEGAN: {
       id: "vegan",
-      title: "Vegano",
-      color: "bg-emerald-500",
+      title: "Vegano"
     },
     VEGETARIAN: {
       id: "vegetarian",
-      title: "Vegetariano",
-      color: "bg-lime-500",
-    },
+      title: "Vegetariano"
+    }
   },
 } as const;
 
-export type MealTag =
-  (typeof APP_CONSTANTS.MEAL_TAGS)[keyof typeof APP_CONSTANTS.MEAL_TAGS];
-export type DietaryTag =
-  (typeof APP_CONSTANTS.DIETARY_TAGS)[keyof typeof APP_CONSTANTS.DIETARY_TAGS];
+export type MealTag = typeof APP_CONSTANTS.MEAL_TAGS[keyof typeof APP_CONSTANTS.MEAL_TAGS];
+export type DietaryTag = typeof APP_CONSTANTS.DIETARY_TAGS[keyof typeof APP_CONSTANTS.DIETARY_TAGS];
+export type SideDish = typeof APP_CONSTANTS.SIDE_DISHES[keyof typeof APP_CONSTANTS.SIDE_DISHES];
 
 // Tipos base
 type DietaryInfo = {
@@ -108,9 +106,10 @@ type NutritionalInfo = {
 };
 
 type PreparationInfo = {
-  heatingTime: number;
-  servingSize: string;
-  servings: number;
+  heatingTime: number;      // Tiempo en minutos en baño maría
+  servingSize: string;      // Tamaño de la porción
+  servings: number;         // Número de porciones
+  sideDish?: SideDish;      // Guarnición opcional
 };
 
 type StorageInfo = {
@@ -135,23 +134,8 @@ interface Product {
   rating: number;
   reviews: number;
   discount?: number;
-}
-
-interface MealPlan {
-  id: number;
-  name: string;
-  description: string;
-  duration: number; // días
-  mealsPerDay: number;
-  basePrice: number;
-  discount: number;
-  targetAudience: string;
-  includes: string[];
-  nutritionalTarget: {
-    minProtein: number;
-    maxCalories: number;
-  };
-  tags: MealTag[];
+  stock: number;
+  isActive: boolean;
 }
 
 // Definición de categorías
@@ -195,79 +179,6 @@ export const categories: Record<
   },
 };
 
-// Planes predefinidos
-export const mealPlans: MealPlan[] = [
-  {
-    id: 1,
-    name: "Plan Deportista",
-    description:
-      "Ideal para deportistas y personas activas que buscan mantener una dieta alta en proteínas",
-    duration: 7,
-    mealsPerDay: 2,
-    basePrice: 14999,
-    discount: 10,
-    targetAudience: "Deportistas y personas activas",
-    includes: [
-      "14 comidas balanceadas",
-      "Alto contenido proteico",
-      "Variedad de proteínas magras",
-      "Guía de nutrición deportiva",
-    ],
-    nutritionalTarget: {
-      minProtein: 30,
-      maxCalories: 600,
-    },
-    tags: [APP_CONSTANTS.MEAL_TAGS.ATHLETE, APP_CONSTANTS.MEAL_TAGS.POPULAR],
-  },
-  {
-    id: 2,
-    name: "Plan Office",
-    description:
-      "Perfecto para profesionales ocupados que buscan una alimentación saludable y conveniente",
-    duration: 5,
-    mealsPerDay: 1,
-    basePrice: 9999,
-    discount: 5,
-    targetAudience: "Profesionales ocupados",
-    includes: [
-      "5 almuerzos balanceados",
-      "Fácil preparación",
-      "Contenedores aptos microondas",
-      "Guía de snacks saludables",
-    ],
-    nutritionalTarget: {
-      minProtein: 25,
-      maxCalories: 500,
-    },
-    tags: [APP_CONSTANTS.MEAL_TAGS.OFFICE, APP_CONSTANTS.MEAL_TAGS.POPULAR],
-  },
-  {
-    id: 3,
-    name: "Plan Familia",
-    description:
-      "Porciones familiares para compartir, con opciones que gustan a todos",
-    duration: 7,
-    mealsPerDay: 1,
-    basePrice: 19999,
-    discount: 15,
-    targetAudience: "Familias",
-    includes: [
-      "7 comidas familiares",
-      "Porciones para 4 personas",
-      "Recetas tradicionales",
-      "Guía de complementos",
-    ],
-    nutritionalTarget: {
-      minProtein: 25,
-      maxCalories: 550,
-    },
-    tags: [
-      APP_CONSTANTS.MEAL_TAGS.FAMILY_SIZE,
-      APP_CONSTANTS.MEAL_TAGS.BESTSELLER,
-    ],
-  },
-];
-
 // Productos ejemplo
 export const products: Product[] = [
   {
@@ -275,22 +186,23 @@ export const products: Product[] = [
     title: "Pollo al Limón con Quinoa",
     desc: "Pechuga de pollo jugosa marinada en limón, acompañada de quinoa y vegetales al vapor",
     img: "/temporary/p1.png",
-    price: 2499,
+    price: 2500,
     nutritionalInfo: {
-      calories: 420,
+      calories: 450,
       protein: 35,
-      carbs: 45,
-      fat: 12,
-      fiber: 6,
+      carbs: 30,
+      fat: 15,
+      fiber: 5,
     },
     preparationInfo: {
-      heatingTime: 12,
-      servingSize: "350g",
+      heatingTime: 3,
+      servingSize: "400g",
       servings: 1,
+      sideDish: APP_CONSTANTS.SIDE_DISHES.ROASTED_VEGETABLES
     },
     storageInfo: {
-      shelfLife: 14,
-      instructions: "Mantener refrigerado entre 0°C y 4°C",
+      shelfLife: 5,
+      instructions: "Mantener refrigerado entre 0°C y 5°C",
     },
     dietaryInfo: {
       isGlutenFree: true,
@@ -299,9 +211,12 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "protein",
-    tags: [APP_CONSTANTS.MEAL_TAGS.POPULAR, APP_CONSTANTS.MEAL_TAGS.ATHLETE],
+    tags: [APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL, APP_CONSTANTS.MEAL_TAGS.FEATURED],
     rating: 4.8,
-    reviews: 124,
+    reviews: 256,
+    discount: 10,
+    stock: 15,
+    isActive: true,
   },
   {
     id: 2,
@@ -317,9 +232,9 @@ export const products: Product[] = [
       fiber: 12,
     },
     preparationInfo: {
-      heatingTime: 10,
-      servingSize: "330g",
-      servings: 1,
+      heatingTime: 3,
+      servingSize: "350g",
+      servings: 1
     },
     storageInfo: {
       shelfLife: 10,
@@ -332,9 +247,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "vegetarian",
-    tags: [APP_CONSTANTS.MEAL_TAGS.WEIGHT_LOSS, APP_CONSTANTS.MEAL_TAGS.OFFICE],
+    tags: [APP_CONSTANTS.MEAL_TAGS.SEASONAL, APP_CONSTANTS.MEAL_TAGS.FEATURED],
     rating: 4.6,
     reviews: 89,
+    stock: 8,
+    isActive: true,
   },
   {
     id: 3,
@@ -350,9 +267,10 @@ export const products: Product[] = [
       fiber: 4,
     },
     preparationInfo: {
-      heatingTime: 8,
+      heatingTime: 4,
       servingSize: "380g",
       servings: 1,
+      sideDish: APP_CONSTANTS.SIDE_DISHES.MASHED_POTATOES
     },
     storageInfo: {
       shelfLife: 7,
@@ -365,9 +283,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "protein",
-    tags: [APP_CONSTANTS.MEAL_TAGS.BESTSELLER, APP_CONSTANTS.MEAL_TAGS.OFFICE],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.9,
     reviews: 156,
+    stock: 12,
+    isActive: true,
   },
   {
     id: 4,
@@ -383,9 +303,9 @@ export const products: Product[] = [
       fiber: 14,
     },
     preparationInfo: {
-      heatingTime: 6,
-      servingSize: "340g",
-      servings: 1,
+      heatingTime: 3,
+      servingSize: "400g",
+      servings: 1
     },
     storageInfo: {
       shelfLife: 10,
@@ -398,12 +318,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "vegan",
-    tags: [
-      APP_CONSTANTS.MEAL_TAGS.WEIGHT_LOSS,
-      APP_CONSTANTS.MEAL_TAGS.POPULAR,
-    ],
+    tags: [APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL, APP_CONSTANTS.MEAL_TAGS.FEATURED],
     rating: 4.7,
     reviews: 92,
+    stock: 5,
+    isActive: true,
   },
   {
     id: 5,
@@ -419,9 +338,10 @@ export const products: Product[] = [
       fiber: 6,
     },
     preparationInfo: {
-      heatingTime: 10,
-      servingSize: "360g",
+      heatingTime: 4,
+      servingSize: "350g",
       servings: 1,
+      sideDish: APP_CONSTANTS.SIDE_DISHES.MASHED_PUMPKIN
     },
     storageInfo: {
       shelfLife: 12,
@@ -434,12 +354,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "lowCarb",
-    tags: [
-      APP_CONSTANTS.MEAL_TAGS.ATHLETE,
-      APP_CONSTANTS.MEAL_TAGS.WEIGHT_LOSS,
-    ],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.SEASONAL],
     rating: 4.5,
     reviews: 78,
+    stock: 18,
+    isActive: true,
   },
   {
     id: 6,
@@ -455,9 +374,9 @@ export const products: Product[] = [
       fiber: 12,
     },
     preparationInfo: {
-      heatingTime: 8,
+      heatingTime: 3,
       servingSize: "400g",
-      servings: 1,
+      servings: 1
     },
     storageInfo: {
       shelfLife: 10,
@@ -470,9 +389,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "vegetarian",
-    tags: [APP_CONSTANTS.MEAL_TAGS.NEW, APP_CONSTANTS.MEAL_TAGS.OFFICE],
+    tags: [APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL, APP_CONSTANTS.MEAL_TAGS.FEATURED],
     rating: 4.4,
     reviews: 45,
+    stock: 7,
+    isActive: true,
   },
   {
     id: 7,
@@ -488,9 +409,10 @@ export const products: Product[] = [
       fiber: 5,
     },
     preparationInfo: {
-      heatingTime: 15,
+      heatingTime: 5,
       servingSize: "800g",
       servings: 4,
+      sideDish: APP_CONSTANTS.SIDE_DISHES.FRENCH_FRIES
     },
     storageInfo: {
       shelfLife: 14,
@@ -503,13 +425,12 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "protein",
-    tags: [
-      APP_CONSTANTS.MEAL_TAGS.FAMILY_SIZE,
-      APP_CONSTANTS.MEAL_TAGS.BESTSELLER,
-    ],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.8,
     reviews: 167,
     discount: 10,
+    stock: 16,
+    isActive: true,
   },
   {
     id: 8,
@@ -525,9 +446,9 @@ export const products: Product[] = [
       fiber: 12,
     },
     preparationInfo: {
-      heatingTime: 7,
-      servingSize: "350g",
-      servings: 1,
+      heatingTime: 3,
+      servingSize: "400g",
+      servings: 1
     },
     storageInfo: {
       shelfLife: 10,
@@ -540,9 +461,11 @@ export const products: Product[] = [
       isNutFree: false,
     },
     category: "vegan",
-    tags: [APP_CONSTANTS.MEAL_TAGS.ATHLETE, APP_CONSTANTS.MEAL_TAGS.NEW],
+    tags: [APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL, APP_CONSTANTS.MEAL_TAGS.FEATURED],
     rating: 4.6,
     reviews: 34,
+    stock: 9,
+    isActive: true,
   },
   {
     id: 9,
@@ -558,9 +481,10 @@ export const products: Product[] = [
       fiber: 4,
     },
     preparationInfo: {
-      heatingTime: 6,
-      servingSize: "320g",
+      heatingTime: 3,
+      servingSize: "350g",
       servings: 1,
+      sideDish: APP_CONSTANTS.SIDE_DISHES.ROASTED_VEGETABLES
     },
     storageInfo: {
       shelfLife: 7,
@@ -573,9 +497,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "lowCarb",
-    tags: [APP_CONSTANTS.MEAL_TAGS.ATHLETE, APP_CONSTANTS.MEAL_TAGS.POPULAR],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.7,
     reviews: 89,
+    stock: 11,
+    isActive: true,
   },
   {
     id: 10,
@@ -591,9 +517,9 @@ export const products: Product[] = [
       fiber: 8,
     },
     preparationInfo: {
-      heatingTime: 20,
+      heatingTime: 5,
       servingSize: "750g",
-      servings: 4,
+      servings: 4
     },
     storageInfo: {
       shelfLife: 14,
@@ -606,13 +532,12 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "vegetarian",
-    tags: [
-      APP_CONSTANTS.MEAL_TAGS.FAMILY_SIZE,
-      APP_CONSTANTS.MEAL_TAGS.BESTSELLER,
-    ],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.8,
     reviews: 145,
     discount: 15,
+    stock: 14,
+    isActive: true,
   },
   {
     id: 11,
@@ -628,9 +553,9 @@ export const products: Product[] = [
       fiber: 8,
     },
     preparationInfo: {
-      heatingTime: 5,
+      heatingTime: 3,
       servingSize: "300g",
-      servings: 1,
+      servings: 1
     },
     storageInfo: {
       shelfLife: 7,
@@ -643,9 +568,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "protein",
-    tags: [APP_CONSTANTS.MEAL_TAGS.OFFICE, APP_CONSTANTS.MEAL_TAGS.POPULAR],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.5,
     reviews: 67,
+    stock: 6,
+    isActive: true,
   },
   {
     id: 12,
@@ -661,9 +588,9 @@ export const products: Product[] = [
       fiber: 12,
     },
     preparationInfo: {
-      heatingTime: 8,
+      heatingTime: 4,
       servingSize: "350g",
-      servings: 1,
+      servings: 1
     },
     storageInfo: {
       shelfLife: 10,
@@ -676,9 +603,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "vegan",
-    tags: [APP_CONSTANTS.MEAL_TAGS.WEIGHT_LOSS, APP_CONSTANTS.MEAL_TAGS.NEW],
+    tags: [APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL, APP_CONSTANTS.MEAL_TAGS.FEATURED],
     rating: 4.4,
     reviews: 42,
+    stock: 13,
+    isActive: true,
   },
   {
     id: 13,
@@ -694,9 +623,10 @@ export const products: Product[] = [
       fiber: 4,
     },
     preparationInfo: {
-      heatingTime: 15,
+      heatingTime: 5,
       servingSize: "800g",
       servings: 4,
+      sideDish: APP_CONSTANTS.SIDE_DISHES.MASHED_POTATOES
     },
     storageInfo: {
       shelfLife: 14,
@@ -709,13 +639,12 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "protein",
-    tags: [
-      APP_CONSTANTS.MEAL_TAGS.FAMILY_SIZE,
-      APP_CONSTANTS.MEAL_TAGS.BESTSELLER,
-    ],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.9,
     reviews: 189,
     discount: 12,
+    stock: 19,
+    isActive: true,
   },
   {
     id: 15,
@@ -731,9 +660,9 @@ export const products: Product[] = [
       fiber: 6,
     },
     preparationInfo: {
-      heatingTime: 8,
+      heatingTime: 3,
       servingSize: "340g",
-      servings: 1,
+      servings: 1
     },
     storageInfo: {
       shelfLife: 10,
@@ -746,9 +675,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "lowCarb",
-    tags: [APP_CONSTANTS.MEAL_TAGS.ATHLETE, APP_CONSTANTS.MEAL_TAGS.POPULAR],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.7,
     reviews: 82,
+    stock: 4,
+    isActive: true,
   },
   {
     id: 16,
@@ -765,8 +696,8 @@ export const products: Product[] = [
     },
     preparationInfo: {
       heatingTime: 0,
-      servingSize: "320g",
-      servings: 1,
+      servingSize: "400g",
+      servings: 1
     },
     storageInfo: {
       shelfLife: 5,
@@ -779,9 +710,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "protein",
-    tags: [APP_CONSTANTS.MEAL_TAGS.OFFICE, APP_CONSTANTS.MEAL_TAGS.WEIGHT_LOSS],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.5,
     reviews: 64,
+    stock: 17,
+    isActive: true,
   },
   {
     id: 17,
@@ -797,9 +730,9 @@ export const products: Product[] = [
       fiber: 10,
     },
     preparationInfo: {
-      heatingTime: 12,
-      servingSize: "750g",
-      servings: 4,
+      heatingTime: 4,
+      servingSize: "800g",
+      servings: 4
     },
     storageInfo: {
       shelfLife: 10,
@@ -812,10 +745,12 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "vegan",
-    tags: [APP_CONSTANTS.MEAL_TAGS.FAMILY_SIZE, APP_CONSTANTS.MEAL_TAGS.NEW],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.6,
     reviews: 38,
     discount: 8,
+    stock: 10,
+    isActive: true,
   },
   {
     id: 18,
@@ -831,9 +766,10 @@ export const products: Product[] = [
       fiber: 4,
     },
     preparationInfo: {
-      heatingTime: 10,
+      heatingTime: 4,
       servingSize: "360g",
       servings: 1,
+      sideDish: APP_CONSTANTS.SIDE_DISHES.ROASTED_VEGETABLES
     },
     storageInfo: {
       shelfLife: 10,
@@ -846,9 +782,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "lowCarb",
-    tags: [APP_CONSTANTS.MEAL_TAGS.ATHLETE, APP_CONSTANTS.MEAL_TAGS.BESTSELLER],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.8,
     reviews: 95,
+    stock: 3,
+    isActive: true,
   },
   {
     id: 19,
@@ -864,9 +802,9 @@ export const products: Product[] = [
       fiber: 6,
     },
     preparationInfo: {
-      heatingTime: 8,
+      heatingTime: 4,
       servingSize: "350g",
-      servings: 1,
+      servings: 1
     },
     storageInfo: {
       shelfLife: 8,
@@ -879,9 +817,11 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "vegetarian",
-    tags: [APP_CONSTANTS.MEAL_TAGS.POPULAR, APP_CONSTANTS.MEAL_TAGS.OFFICE],
+    tags: [APP_CONSTANTS.MEAL_TAGS.FEATURED, APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL],
     rating: 4.7,
     reviews: 76,
+    stock: 20,
+    isActive: true,
   },
   {
     id: 20,
@@ -897,9 +837,9 @@ export const products: Product[] = [
       fiber: 8,
     },
     preparationInfo: {
-      heatingTime: 12,
-      servingSize: "330g",
-      servings: 1,
+      heatingTime: 4,
+      servingSize: "300g",
+      servings: 1
     },
     storageInfo: {
       shelfLife: 7,
@@ -912,12 +852,14 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "lowCarb",
-    tags: [APP_CONSTANTS.MEAL_TAGS.NEW, APP_CONSTANTS.MEAL_TAGS.OFFICE],
+    tags: [APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL, APP_CONSTANTS.MEAL_TAGS.FEATURED],
     rating: 4.5,
     reviews: 42,
+    stock: 2,
+    isActive: true,
   },
   {
-    id: 42,
+    id: 21,
     title: "Low Carb Bowl",
     desc: "Bowl bajo en carbohidratos con pollo a la parrilla, aguacate y vegetales frescos",
     img: "/images/low-carb-bowl.jpg",
@@ -930,9 +872,9 @@ export const products: Product[] = [
       fiber: 6,
     },
     preparationInfo: {
-      heatingTime: 2,
-      servingSize: "320g",
-      servings: 1,
+      heatingTime: 3,
+      servingSize: "350g",
+      servings: 1
     },
     storageInfo: {
       shelfLife: 3,
@@ -945,8 +887,10 @@ export const products: Product[] = [
       isNutFree: true,
     },
     category: "lowCarb",
-    tags: [APP_CONSTANTS.MEAL_TAGS.NEW, APP_CONSTANTS.MEAL_TAGS.OFFICE],
+    tags: [APP_CONSTANTS.MEAL_TAGS.NEW_ARRIVAL, APP_CONSTANTS.MEAL_TAGS.FEATURED],
     rating: 4.5,
     reviews: 42,
+    stock: 1,
+    isActive: true,
   },
 ];
