@@ -25,8 +25,8 @@ export const siteConfig: SiteConfiguration = {
       href: "/",
     },
     {
-      title: "Menu",
-      href: "/menu",
+      title: "Tienda",
+      href: "/store",
     },
     {
       title: "Nosotros",

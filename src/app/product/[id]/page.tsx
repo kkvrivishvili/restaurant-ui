@@ -7,6 +7,7 @@ import { useCart } from "@/context/CartContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { toast } from "@/components/ui/use-toast"; // Import toast
 import {
   Snowflake,
   Flame,
@@ -53,7 +54,12 @@ const SingleProductPage = () => {
   };
 
   const handleAddToCart = () => {
+    if (!product) return;
     addToCart(product.id);
+    toast({
+      title: "Producto agregado",
+      description: product.title,
+    });
   };
 
   return (

@@ -28,7 +28,6 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Notification />
           <CartProvider>
             <div className="flex flex-col min-h-screen">
               <Navbar />
@@ -37,6 +36,7 @@ export default function RootLayout({
               </main>
               <Footer />
             </div>
+            <Notification />
           </CartProvider>
         </ThemeProvider>
       </body>

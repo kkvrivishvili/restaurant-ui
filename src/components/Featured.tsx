@@ -2,7 +2,8 @@
 
 import { products, APP_CONSTANTS } from "@/data";
 import Image from "next/image";
-import { useCart } from "@/hooks/use-cart";
+import { useCart } from "@/context/CartContext";
+import { toast } from "@/components/ui/use-toast";
 import { Flame, Clock, Star, BadgePercent, Award, Leaf } from "lucide-react";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
@@ -29,6 +30,14 @@ const Featured = () => {
   if (promotionalProducts.length === 0) {
     return null;
   }
+
+  const handleAddToCart = (productId: number, title: string) => {
+    addToCart(productId);
+    toast({
+      title: "Producto agregado",
+      description: title,
+    });
+  };
 
   return (
     <section className="w-full py-8 bg-secondary/10">
@@ -136,9 +145,10 @@ const Featured = () => {
                     )}
                   </div>
                   <Button
-                    onClick={() => addToCart(item)}
+                    onClick={() => handleAddToCart(item.id, item.title)}
                     size="sm"
                     className="rounded-full"
+                    disabled={!item.isActive || item.stock === 0}
                   >
                     Agregar
                   </Button>

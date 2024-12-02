@@ -35,13 +35,45 @@ import React from "react";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Plus, Minus } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 const formatPrice = (price: number) => {
   return `$${(price/100).toFixed(2)}`;
 };
 
 const CartPage = () => {
-  const { items, removeFromCart, addToCart, totalPrice } = useCart();
+  const { items, removeFromCart, addToCart, updateQuantity, totalPrice } = useCart();
+
+  const handleRemoveFromCart = (productId: number) => {
+    removeFromCart(productId);
+    toast({
+      title: "Producto eliminado",
+      description: "El producto ha sido eliminado del carrito",
+    });
+  };
+
+  const handleUpdateQuantity = (productId: number, action: 'increase' | 'decrease') => {
+    const item = items.find(item => item.id === productId);
+    if (!item) return;
+
+    if (action === 'increase') {
+      addToCart(productId);
+      toast({
+        title: "Cantidad actualizada",
+        description: `${item.title} (${item.quantity + 1}x)`,
+      });
+    } else {
+      if (item.quantity === 1) {
+        handleRemoveFromCart(productId);
+      } else {
+        updateQuantity(productId, item.quantity - 1);
+        toast({
+          title: "Cantidad actualizada",
+          description: `${item.title} (${item.quantity - 1}x)`,
+        });
+      }
+    }
+  };
 
   return (
     <Container className="py-8">
@@ -78,7 +110,7 @@ const CartPage = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => removeFromCart(item.id)}
+                      onClick={() => handleUpdateQuantity(item.id, 'decrease')}
                       className="h-8 w-8"
                     >
                       <Minus className="h-4 w-4" />
@@ -87,7 +119,7 @@ const CartPage = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => addToCart(item.id)}
+                      onClick={() => handleUpdateQuantity(item.id, 'increase')}
                       className="h-8 w-8"
                     >
                       <Plus className="h-4 w-4" />

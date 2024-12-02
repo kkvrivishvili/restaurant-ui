@@ -7,10 +7,6 @@
  * - Calcular totales
  * - Notificaciones usando el sistema toast de Radix UI
  *
- * Configuración:
- * - Las notificaciones se pueden personalizar en @/components/ui/toast.tsx
- * - Los precios se manejan en centavos (dividir por 100 para mostrar)
- *
  * Uso:
  * ```tsx
  * // En un componente:
@@ -20,7 +16,7 @@
 
 "use client";
 
-import { products } from "@/data";
+import { products, type Product } from "@/data";
 import {
   createContext,
   useContext,
@@ -31,17 +27,15 @@ import {
 import { toast } from "@/components/ui/use-toast";
 
 // Tipos para los items del carrito y el contexto
-type CartItem = {
-  id: number;
+interface CartItem extends Product {
   quantity: number;
-  price: number;
-  title: string;
-};
+}
 
 type CartContextType = {
   items: CartItem[];
   addToCart: (productId: number) => void;
   removeFromCart: (productId: number) => void;
+  updateQuantity: (productId: number, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -51,10 +45,7 @@ export const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [lastAction, setLastAction] = useState<{
-    type: "add" | "remove" | "error";
-    productId?: number;
-  } | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -65,119 +56,56 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Error loading cart:", error);
-      setLastAction({ type: "error", productId: undefined });
     }
+    setIsInitialized(true);
   }, []);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
+    if (!isInitialized) return;
+    
     try {
       localStorage.setItem("cart", JSON.stringify(items));
     } catch (error) {
       console.error("Error saving cart:", error);
-      setLastAction({ type: "error", productId: undefined });
     }
-  }, [items]);
-
-  // Handle notifications
-  useEffect(() => {
-    if (!lastAction) return;
-
-    if (lastAction.type === "error") {
-      toast({
-        title: "Error",
-        description: "Error al procesar el carrito",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const product = lastAction.productId
-      ? products.find((p) => p.id === lastAction.productId)
-      : null;
-    if (!product) return;
-
-    const item = items.find((item) => item.id === lastAction.productId);
-
-    if (lastAction.type === "add") {
-      if (item && item.quantity > 1) {
-        toast({
-          title: "Carrito actualizado",
-          description: `Cantidad de ${product.title} aumentada`,
-        });
-      } else {
-        toast({
-          title: "Producto agregado",
-          description: `${product.title} agregado al carrito`,
-        });
-      }
-    } else if (lastAction.type === "remove") {
-      if (!item) {
-        toast({
-          title: "Producto eliminado",
-          description: `${product.title} eliminado del carrito`,
-        });
-      } else {
-        toast({
-          title: "Carrito actualizado",
-          description: `Cantidad de ${product.title} reducida`,
-        });
-      }
-    }
-  }, [lastAction, items]);
+  }, [items, isInitialized]);
 
   const addToCart = useCallback((productId: number) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) {
-      setLastAction({ type: "error", productId });
-      return;
-    }
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
 
-    setItems((currentItems) => {
-      const existingItem = currentItems.find((item) => item.id === productId);
-
+    setItems(currentItems => {
+      const existingItem = currentItems.find(item => item.id === productId);
+      
       if (existingItem) {
-        return currentItems.map((item) =>
+        return currentItems.map(item =>
           item.id === productId
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-
-      return [
-        ...currentItems,
-        {
-          id: product.id,
-          title: product.title,
-          price: product.price,
-          quantity: 1,
-        },
-      ];
+      
+      return [...currentItems, { ...product, quantity: 1 }];
     });
-
-    setLastAction({ type: "add", productId });
   }, []);
 
   const removeFromCart = useCallback((productId: number) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) {
-      setLastAction({ type: "error", productId });
-      return;
-    }
-
-    setItems((currentItems) => {
-      const existingItem = currentItems.find((item) => item.id === productId);
-
-      if (existingItem?.quantity === 1) {
-        return currentItems.filter((item) => item.id !== productId);
-      }
-
-      return currentItems.map((item) =>
-        item.id === productId ? { ...item, quantity: item.quantity - 1 } : item
-      );
+    setItems(currentItems => {
+      return currentItems.filter(item => item.id !== productId);
     });
+  }, []);
 
-    setLastAction({ type: "remove", productId });
+  const updateQuantity = useCallback((productId: number, quantity: number) => {
+    if (quantity < 0) return;
+    
+    setItems(currentItems => {
+      return currentItems.map(item =>
+        item.id === productId
+          ? { ...item, quantity }
+          : item
+      ).filter(item => item.quantity > 0);
+    });
   }, []);
 
   const clearCart = useCallback(() => {
@@ -185,10 +113,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const totalItems = items.reduce((total, item) => total + item.quantity, 0);
-  const totalPrice = items.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
+  const totalPrice = items.reduce((total, item) => total + (item.price * item.quantity), 0);
 
   return (
     <CartContext.Provider
@@ -196,6 +121,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         items,
         addToCart,
         removeFromCart,
+        updateQuantity,
         clearCart,
         totalItems,
         totalPrice,

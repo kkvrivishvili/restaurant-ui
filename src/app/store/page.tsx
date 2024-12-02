@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import { products, APP_CONSTANTS, categories, Product } from "@/data";
 import { Container } from "@/components/ui/container";
 import { Badge } from "@/components/ui/badge";
@@ -31,8 +31,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { useCart } from "@/hooks/use-cart";
-import { usePersistentState } from "@/hooks/use-persistent-state";
+import { CartContext } from "@/context/CartContext";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -52,6 +51,7 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 // Tipos para los filtros
 type Filters = {
@@ -150,7 +150,7 @@ export default function StorePage() {
     {}
   );
 
-  const { addToCart } = useCart();
+  const { addToCart } = useContext(CartContext)!;
   const filterBarRef = useRef<HTMLDivElement>(null);
 
   // Efecto para simular carga inicial
@@ -485,288 +485,300 @@ export default function StorePage() {
     );
   }
 
-  return (
-    <div className="flex flex-col gap-8 pb-8">
-      <Container>
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar with filters */}
-          <div className="w-full md:w-64 space-y-6">
-            {/* Category Filter */}
-            <Card className="p-4">
-              <div className="space-y-2">
-                <h3 className="font-medium">Categoría</h3>
-                <Select
-                  value={filters.category}
-                  onValueChange={(value) =>
-                    setFilters({ ...filters, category: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue>
-                      {filters.category === "all"
-                        ? "Todas las categorías"
-                        : categories[
-                            filters.category as keyof typeof categories
-                          ].title}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las categorías</SelectItem>
-                    {Object.entries(categories).map(([id, category]) => (
-                      <SelectItem key={id} value={id}>
-                        {category.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </Card>
+  const handleAddToCart = (product: Product) => {
+    addToCart(product.id);
+    toast({
+      title: "Producto agregado",
+      description: product.title,
+    });
+  };
 
-            {/* Price Range Filter */}
-            <Card className="p-4">
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Title */}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-center">Tienda</h1>
+      </div>
+
+      {/* Main content container */}
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Sidebar with filters */}
+        <div className="w-full md:w-64 space-y-6">
+          {/* Category Filter */}
+          <Card className="p-4">
+            <div className="space-y-2">
+              <h3 className="font-medium">Categoría</h3>
+              <Select
+                value={filters.category}
+                onValueChange={(value) =>
+                  setFilters({ ...filters, category: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {filters.category === "all"
+                      ? "Todas las categorías"
+                      : categories[
+                          filters.category as keyof typeof categories
+                        ].title}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las categorías</SelectItem>
+                  {Object.entries(categories).map(([id, category]) => (
+                    <SelectItem key={id} value={id}>
+                      {category.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </Card>
+
+          {/* Price Range Filter */}
+          <Card className="p-4">
+            <div className="space-y-4">
+              <h3 className="font-medium">Rango de Precio</h3>
+              <div className="pt-2">
+                <Slider
+                  defaultValue={[filters.minPrice, filters.maxPrice]}
+                  max={5000}
+                  step={100}
+                  onValueChange={([min, max]) =>
+                    setFilters({ ...filters, minPrice: min, maxPrice: max })
+                  }
+                />
+                <div className="flex justify-between mt-2">
+                  <span className="text-sm text-muted-foreground">
+                    ${filters.minPrice}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    ${filters.maxPrice}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Dietary Preferences */}
+          <Card className="p-4">
+            <div className="space-y-4">
+              <h3 className="font-medium">Preferencias Dietéticas</h3>
               <div className="space-y-4">
-                <h3 className="font-medium">Rango de Precio</h3>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm">Sin Gluten</label>
+                  <Switch
+                    checked={filters.isGlutenFree}
+                    onCheckedChange={(checked) =>
+                      setFilters({ ...filters, isGlutenFree: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm">Sin Lácteos</label>
+                  <Switch
+                    checked={filters.isDairyFree}
+                    onCheckedChange={(checked) =>
+                      setFilters({ ...filters, isDairyFree: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm">Vegano</label>
+                  <Switch
+                    checked={filters.isVegan}
+                    onCheckedChange={(checked) =>
+                      setFilters({ ...filters, isVegan: checked })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Nutritional Filters */}
+          <Card className="p-4">
+            <div className="space-y-4">
+              <h3 className="font-medium">Información Nutricional</h3>
+              {/* Calories */}
+              <div className="space-y-2">
+                <label className="text-sm">Calorías</label>
                 <div className="pt-2">
                   <Slider
-                    defaultValue={[filters.minPrice, filters.maxPrice]}
-                    max={5000}
-                    step={100}
+                    defaultValue={[
+                      filters.nutritional.minCalories,
+                      filters.nutritional.maxCalories,
+                    ]}
+                    max={1000}
+                    step={50}
                     onValueChange={([min, max]) =>
-                      setFilters({ ...filters, minPrice: min, maxPrice: max })
+                      setFilters({
+                        ...filters,
+                        nutritional: {
+                          ...filters.nutritional,
+                          minCalories: min,
+                          maxCalories: max,
+                        },
+                      })
                     }
                   />
                   <div className="flex justify-between mt-2">
                     <span className="text-sm text-muted-foreground">
-                      ${filters.minPrice}
+                      {filters.nutritional.minCalories} kcal
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      ${filters.maxPrice}
+                      {filters.nutritional.maxCalories} kcal
                     </span>
                   </div>
                 </div>
               </div>
-            </Card>
 
-            {/* Dietary Preferences */}
-            <Card className="p-4">
-              <div className="space-y-4">
-                <h3 className="font-medium">Preferencias Dietéticas</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm">Sin Gluten</label>
-                    <Switch
-                      checked={filters.isGlutenFree}
-                      onCheckedChange={(checked) =>
-                        setFilters({ ...filters, isGlutenFree: checked })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm">Sin Lácteos</label>
-                    <Switch
-                      checked={filters.isDairyFree}
-                      onCheckedChange={(checked) =>
-                        setFilters({ ...filters, isDairyFree: checked })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm">Vegano</label>
-                    <Switch
-                      checked={filters.isVegan}
-                      onCheckedChange={(checked) =>
-                        setFilters({ ...filters, isVegan: checked })
-                      }
-                    />
+              {/* Protein */}
+              <div className="space-y-2">
+                <label className="text-sm">Proteínas</label>
+                <div className="pt-2">
+                  <Slider
+                    defaultValue={[
+                      filters.nutritional.minProtein,
+                      filters.nutritional.maxProtein,
+                    ]}
+                    max={100}
+                    step={5}
+                    onValueChange={([min, max]) =>
+                      setFilters({
+                        ...filters,
+                        nutritional: {
+                          ...filters.nutritional,
+                          minProtein: min,
+                          maxProtein: max,
+                        },
+                      })
+                    }
+                  />
+                  <div className="flex justify-between mt-2">
+                    <span className="text-sm text-muted-foreground">
+                      {filters.nutritional.minProtein}g
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {filters.nutritional.maxProtein}g
+                    </span>
                   </div>
                 </div>
               </div>
-            </Card>
 
-            {/* Nutritional Filters */}
-            <Card className="p-4">
-              <div className="space-y-4">
-                <h3 className="font-medium">Información Nutricional</h3>
-                
-                {/* Calories */}
-                <div className="space-y-2">
-                  <label className="text-sm">Calorías</label>
-                  <div className="pt-2">
-                    <Slider
-                      defaultValue={[
-                        filters.nutritional.minCalories,
-                        filters.nutritional.maxCalories,
-                      ]}
-                      max={1000}
-                      step={50}
-                      onValueChange={([min, max]) =>
-                        setFilters({
-                          ...filters,
-                          nutritional: {
-                            ...filters.nutritional,
-                            minCalories: min,
-                            maxCalories: max,
-                          },
-                        })
-                      }
-                    />
-                    <div className="flex justify-between mt-2">
-                      <span className="text-sm text-muted-foreground">
-                        {filters.nutritional.minCalories} kcal
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {filters.nutritional.maxCalories} kcal
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Protein */}
-                <div className="space-y-2">
-                  <label className="text-sm">Proteínas</label>
-                  <div className="pt-2">
-                    <Slider
-                      defaultValue={[
-                        filters.nutritional.minProtein,
-                        filters.nutritional.maxProtein,
-                      ]}
-                      max={100}
-                      step={5}
-                      onValueChange={([min, max]) =>
-                        setFilters({
-                          ...filters,
-                          nutritional: {
-                            ...filters.nutritional,
-                            minProtein: min,
-                            maxProtein: max,
-                          },
-                        })
-                      }
-                    />
-                    <div className="flex justify-between mt-2">
-                      <span className="text-sm text-muted-foreground">
-                        {filters.nutritional.minProtein}g
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {filters.nutritional.maxProtein}g
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Carbs */}
-                <div className="space-y-2">
-                  <label className="text-sm">Carbohidratos</label>
-                  <div className="pt-2">
-                    <Slider
-                      defaultValue={[
-                        filters.nutritional.minCarbs,
-                        filters.nutritional.maxCarbs,
-                      ]}
-                      max={100}
-                      step={5}
-                      onValueChange={([min, max]) =>
-                        setFilters({
-                          ...filters,
-                          nutritional: {
-                            ...filters.nutritional,
-                            minCarbs: min,
-                            maxCarbs: max,
-                          },
-                        })
-                      }
-                    />
-                    <div className="flex justify-between mt-2">
-                      <span className="text-sm text-muted-foreground">
-                        {filters.nutritional.minCarbs}g
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {filters.nutritional.maxCarbs}g
-                      </span>
-                    </div>
+              {/* Carbs */}
+              <div className="space-y-2">
+                <label className="text-sm">Carbohidratos</label>
+                <div className="pt-2">
+                  <Slider
+                    defaultValue={[
+                      filters.nutritional.minCarbs,
+                      filters.nutritional.maxCarbs,
+                    ]}
+                    max={100}
+                    step={5}
+                    onValueChange={([min, max]) =>
+                      setFilters({
+                        ...filters,
+                        nutritional: {
+                          ...filters.nutritional,
+                          minCarbs: min,
+                          maxCarbs: max,
+                        },
+                      })
+                    }
+                  />
+                  <div className="flex justify-between mt-2">
+                    <span className="text-sm text-muted-foreground">
+                      {filters.nutritional.minCarbs}g
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {filters.nutritional.maxCarbs}g
+                    </span>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
+          </Card>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1">
+          {/* Search bar */}
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar productos..."
+              value={filters.search}
+              onChange={(e) =>
+                setFilters({ ...filters, search: e.target.value })
+              }
+              className="pl-10"
+            />
           </div>
 
-          {/* Main content */}
-          <div className="flex-1">
-            {/* Search bar */}
-            <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar productos..."
-                value={filters.search}
-                onChange={(e) =>
-                  setFilters({ ...filters, search: e.target.value })
-                }
-                className="pl-10"
-              />
-            </div>
+          {/* Results count */}
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground">
+              {filteredProducts.length} productos encontrados
+            </p>
+          </div>
 
-            {/* Results count */}
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground">
-                {filteredProducts.length} productos encontrados
-              </p>
-            </div>
-
-            {/* Products grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="overflow-hidden transition-all duration-200 hover:shadow-lg"
-                >
-                  <CardHeader className="p-0">
-                    <div className="aspect-square relative">
-                      <Image
-                        src={product.img}
-                        alt={product.title}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <CategoryIcon category={product.category} />
-                      <Badge variant="secondary">
-                        {categories[product.category].title}
-                      </Badge>
-                    </div>
-                    <h3 className="text-lg font-semibold">{product.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {product.desc}
-                    </p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm">
-                        {product.rating} ({product.reviews} reseñas)
-                      </span>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0">
-                    <div className="flex w-full items-center justify-between">
-                      <span className="text-lg font-bold">
-                        ${(product.price / 100).toFixed(2)}
-                      </span>
-                      <Button
-                        size="icon"
-                        onClick={() => addToCart(product)}
-                        disabled={!product.isActive || product.stock === 0}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+          {/* Products grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProducts.map((product) => (
+              <Card
+                key={product.id}
+                className="overflow-hidden transition-all duration-200 hover:shadow-lg cursor-pointer"
+                onClick={() => {
+                  // Navigate to product detail page
+                  window.location.href = `/product/${product.id}`;
+                }}
+              >
+                <CardHeader className="p-0">
+                  <div className="aspect-square relative">
+                    <Image
+                      src={product.img}
+                      alt={product.title}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-semibold">{product.title}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {product.desc}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm">
+                      {product.rating} ({product.reviews} reseñas)
+                    </span>
+                  </div>
+                </CardContent>
+                <CardFooter className="p-4 pt-0">
+                  <div className="flex w-full items-center justify-between">
+                    <span className="text-lg font-bold">
+                      ${(product.price / 100).toFixed(2)}
+                    </span>
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click when clicking button
+                        handleAddToCart(product);
+                      }}
+                      disabled={!product.isActive || product.stock === 0}
+                    >
+                      Agregar al carrito
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
         </div>
-      </Container>
+      </div>
     </div>
   );
 }
