@@ -31,21 +31,12 @@
  * - Títulos y descripciones dinámicas
  */
 
-import Featured from '@/components/Featured'
-import Offer from '@/components/Offer'
 import Slider from '@/components/Slider'
-import { Container } from '@/components/ui/container'
 
 export default function Home() {
   return (
     <div className="flex flex-col gap-y-8 pb-8">
       <Slider />
-      <Container>
-        <Featured />
-      </Container>
-      <Container>
-        <Offer />
-      </Container>
     </div>
   )
 }
