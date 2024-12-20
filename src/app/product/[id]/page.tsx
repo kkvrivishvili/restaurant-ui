@@ -13,8 +13,7 @@ import {
   Flame,
   Leaf,
   Scale,
-  Snowflake,
-  Star,
+  Snowflake
 } from "lucide-react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
