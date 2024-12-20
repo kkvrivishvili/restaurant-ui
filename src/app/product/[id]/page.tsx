@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/context/CartContext";
 import { useStore, type Product } from "@/hooks/useStore";
 import {
@@ -81,10 +80,7 @@ const SingleProductPage = () => {
   const handleAddToCart = () => {
     if (!product) return;
     addToCart(product.id);
-    toast({
-      title: "Producto agregado",
-      description: product.title,
-    });
+    // Eliminamos el toast de aquí ya que se muestra en el CartContext
   };
 
   return (
