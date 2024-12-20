@@ -1,22 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useStore, type Filters } from "@/hooks/useStore";
-import { Container } from "@/components/ui/container";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ProductCardSkeleton } from "@/components/products/ProductCardSkeleton";
+import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import {
   Drawer,
-  DrawerTrigger,
   DrawerContent,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerFooter,
+  DrawerTrigger,
 } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,18 +20,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { useStore, type Filters } from "@/hooks/useStore";
+import { useEffect, useRef, useState } from "react";
+
 import { ProductCard } from "@/components/products/ProductCard";
-import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { useDebounce } from "@/hooks/useDebounce";
-import { toast } from '@/components/ui/use-toast';
+import { cn } from "@/lib/utils";
 
 // Tipos para los iconos
 interface CategoryIconProps {
@@ -79,7 +70,7 @@ export default function StorePage() {
     search: "",
     category: "all",
     minPrice: 0,
-    maxPrice: 10000,
+    maxPrice: 15000,
     isGlutenFree: false,
     isDairyFree: false,
     isVegan: false,
@@ -192,8 +183,8 @@ export default function StorePage() {
         <div className="pt-2">
           <Slider
             min={0}
-            max={10000}
-            step={100}
+            max={15000}
+            step={500}
             value={[filters.minPrice, filters.maxPrice]}
             onValueChange={handlePriceChange}
           />
