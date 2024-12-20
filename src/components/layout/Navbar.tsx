@@ -39,15 +39,8 @@
 
 "use client";
 
-import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
-import CartIcon from "./CartIcon";
-import { User, Menu as MenuIcon } from "lucide-react";
-import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "./theme-toggle";
+import { Container } from "@/components/ui/container";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +48,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { siteConfig } from "@/config/globals";
-import { Container } from "@/components/ui/container";
+import { useCart } from "@/context/CartContext";
+import { Menu as MenuIcon, User } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import CartIcon from "./CartIcon";
+import { ThemeToggle } from "../common/ThemeToggle";
 
 const Navbar = () => {
   const pathname = usePathname();

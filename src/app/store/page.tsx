@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProductCardSkeleton } from "@/components/product-card-skeleton";
+import { ProductCardSkeleton } from "@/components/products/ProductCardSkeleton";
 import {
   Drawer,
   DrawerTrigger,
@@ -32,10 +32,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ProductCard } from "@/components/product-card";
+import { ProductCard } from "@/components/products/ProductCard";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { useDebounce } from "@/hooks/useDebounce";
+import { toast } from '@/components/ui/use-toast';
 
 // Tipos para los iconos
 interface CategoryIconProps {

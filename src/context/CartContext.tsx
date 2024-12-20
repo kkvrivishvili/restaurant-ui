@@ -208,11 +208,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems(currentItems => {
       return currentItems.filter(item => item.id !== productId);
     });
-
-    toast({
-      title: "Éxito",
-      description: "Producto eliminado del carrito",
-    });
   }, []);
 
   const updateQuantity = useCallback(async (productId: string, quantity: number) => {

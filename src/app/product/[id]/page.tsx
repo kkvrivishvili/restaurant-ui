@@ -17,6 +17,7 @@ import {
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { toast } from '@/components/ui/use-toast'
 
 // Constantes de la aplicación
 const APP_CONSTANTS = {

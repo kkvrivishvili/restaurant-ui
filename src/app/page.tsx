@@ -31,7 +31,7 @@
  * - Títulos y descripciones dinámicas
  */
 
-import Slider from '@/components/Slider'
+import Slider from '@/components/sliders/Slider'
 
 export default function Home() {
   return (
