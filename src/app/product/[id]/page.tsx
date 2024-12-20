@@ -1,33 +1,59 @@
 "use client";
 
-import { products, categories, APP_CONSTANTS } from "@/data";
-import Image from "next/image";
-import { useParams } from "next/navigation";
-import { useCart } from "@/context/CartContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { toast } from "@/components/ui/use-toast"; // Import toast
+import { toast } from "@/components/ui/use-toast";
+import { useCart } from "@/context/CartContext";
+import { useStore, type Product } from "@/hooks/useStore";
 import {
-  Snowflake,
-  Flame,
   Beef,
-  Cookie,
-  Scale,
-  Star,
-  Leaf,
   ChefHat,
+  Cookie,
+  Flame,
+  Leaf,
+  Scale,
+  Snowflake,
+  Star,
 } from "lucide-react";
+import Image from "next/image";
+import { useParams } from "next/navigation";
 import { useState } from "react";
+
+// Constantes de la aplicación
+const APP_CONSTANTS = {
+  ICONS: {
+    CALORIES: Flame,
+    PROTEIN: Beef,
+    CARBS: Cookie,
+    WEIGHT: Scale,
+    FROZEN: Snowflake,
+    VEGAN: Leaf,
+    CHEF: ChefHat,
+  },
+  NUTRITIONAL_LABELS: {
+    calories: "Calorías",
+    protein: "Proteínas",
+    carbs: "Carbohidratos",
+    weight: "Peso",
+  },
+  DIETARY_TAGS: {
+    vegan: "Vegano",
+    glutenFree: "Sin gluten",
+    lactoseFree: "Sin lactosa",
+    // Agregar más etiquetas dietéticas aquí
+  },
+};
 
 const SingleProductPage = () => {
   const { id } = useParams();
   const { addToCart } = useCart();
+  const { products, categories } = useStore();
   const [tooltipContent, setTooltipContent] = useState("");
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [showTooltip, setShowTooltip] = useState(false);
 
-  const product = products.find((item) => item.id === parseInt(id as string));
+  const product = products.find((item: Product) => item.id === id);
 
   if (!product) {
     return (
@@ -70,162 +96,172 @@ const SingleProductPage = () => {
           <div className="md:w-1/2">
             <div className="relative aspect-square rounded-lg overflow-hidden mb-4">
               <Image
-                src={product.img}
+                src={product.image_url || "/placeholder.png"}
                 alt={product.title}
-                className="object-cover"
                 fill
-                priority
-                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
-              {product.discount && (
-                <Badge className="absolute top-4 right-4">
-                  -{product.discount}%
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  {product.discount_price && (
+                    <span>
+                      -{Math.round(
+                        ((product.price - product.discount_price) / product.price) * 100
+                      )}%
+                    </span>
+                  )}
                 </Badge>
-              )}
+              </div>
             </div>
           </div>
 
-          {/* TEXT CONTAINER */}
-          <div className="md:w-1/2">
-            {/* Header */}
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline">
-                  {categories[product.category].title}
-                </Badge>
-                {product.rating && (
-                  <Badge
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    <Star
-                      className="w-4 h-4 text-yellow-400"
-                      fill="currentColor"
-                    />
-                    {product.rating}
-                  </Badge>
-                )}
-              </div>
-              <h1 className="text-3xl font-bold mb-2 text-foreground">
-                {product.title}
-              </h1>
-              <p className="text-muted-foreground">{product.desc}</p>
+          {/* INFO CONTAINER */}
+          <div className="md:w-1/2 space-y-6">
+            {/* Title and Description */}
+            <div>
+              <h1 className="text-2xl font-bold mb-2">{product.title}</h1>
+              <p className="text-muted-foreground">{product.description}</p>
             </div>
 
-            {/* Tags */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {Object.entries(product.dietaryInfo).map(
-                ([key, value]) =>
-                  value && (
-                    <Badge
-                      key={key}
-                      variant="outline"
-                      className="flex items-center gap-1"
-                    >
-                      <Leaf className="w-4 h-4" />
-                      {
-                        APP_CONSTANTS.DIETARY_TAGS[
-                          key as keyof typeof APP_CONSTANTS.DIETARY_TAGS
-                        ]
-                      }
-                    </Badge>
-                  )
-              )}
-            </div>
+            {/* Dietary Info */}
+            {product.product_details?.dietary_info && (
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Información Dietética</h2>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(product.product_details.dietary_info as Record<string, boolean>).map(
+                    ([key, value]) =>
+                      value && (
+                        <Badge key={key} variant="outline">
+                          {key === "isGlutenFree"
+                            ? "Sin Gluten"
+                            : key === "isDairyFree"
+                            ? "Sin Lácteos"
+                            : key === "isVegan"
+                            ? "Vegano"
+                            : key === "isNutFree"
+                            ? "Sin Frutos Secos"
+                            : key === "isSoyFree"
+                            ? "Sin Soja"
+                            : key}
+                        </Badge>
+                      )
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Nutritional Info */}
-            <div className="bg-muted/50 rounded-lg p-4 mb-6">
-              <h2 className="text-lg font-semibold mb-4 text-foreground">
-                Información Nutricional
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="flex flex-col items-center p-3 bg-background rounded-lg">
-                  <Flame className="w-6 h-6 text-muted-foreground mb-1" />
-                  <span className="text-lg font-bold text-foreground">
-                    {product.nutritionalInfo.calories}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    Calorías
-                  </span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-background rounded-lg">
-                  <Beef className="w-6 h-6 text-muted-foreground mb-1" />
-                  <span className="text-lg font-bold text-foreground">
-                    {product.nutritionalInfo.protein}g
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    Proteínas
-                  </span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-background rounded-lg">
-                  <Cookie className="w-6 h-6 text-muted-foreground mb-1" />
-                  <span className="text-lg font-bold text-foreground">
-                    {product.nutritionalInfo.carbs}g
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    Carbohidratos
-                  </span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-background rounded-lg">
-                  <Scale className="w-6 h-6 text-muted-foreground mb-1" />
-                  <span className="text-lg font-bold text-foreground">
-                    {product.nutritionalInfo.fat}g
-                  </span>
-                  <span className="text-sm text-muted-foreground">Grasas</span>
+            {product.product_details?.nutritional_info && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Información Nutricional</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Calories */}
+                  <div className="flex items-center gap-2">
+                    <Flame className="h-5 w-5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Calorías</p>
+                      <p className="font-medium">
+                        {(product.product_details.nutritional_info as any).calories} kcal
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Protein */}
+                  <div className="flex items-center gap-2">
+                    <Beef className="h-5 w-5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Proteínas</p>
+                      <p className="font-medium">
+                        {(product.product_details.nutritional_info as any).protein}g
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Carbs */}
+                  <div className="flex items-center gap-2">
+                    <Cookie className="h-5 w-5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Carbohidratos</p>
+                      <p className="font-medium">
+                        {(product.product_details.nutritional_info as any).carbs}g
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Fat */}
+                  <div className="flex items-center gap-2">
+                    <Scale className="h-5 w-5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Grasas</p>
+                      <p className="font-medium">
+                        {(product.product_details.nutritional_info as any).fat}g
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Preparation Info */}
-            <div className="bg-muted/50 rounded-lg p-4 mb-6">
-              <h2 className="text-lg font-semibold mb-4 text-foreground">
-                Preparación y Conservación
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 bg-background p-3 rounded-lg">
-                  <ChefHat className="w-6 h-6 text-muted-foreground" />
-                  <div>
-                    <div className="font-semibold text-foreground">
-                      Preparación
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {product.preparationInfo.heatingTime} min
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 bg-background p-3 rounded-lg">
-                  <Snowflake className="w-6 h-6 text-muted-foreground" />
-                  <div>
-                    <div className="font-semibold text-foreground">
-                      Conservación
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {product.storageInfo.shelfLife} días
-                    </div>
-                  </div>
+            {product.product_details?.preparation_info && (
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Preparación</h2>
+                <div className="space-y-2">
+                  <p>
+                    <span className="font-medium">Tiempo de calentado:</span>{" "}
+                    {(product.product_details.preparation_info as any).heatingTime} minutos
+                  </p>
+                  <p>
+                    <span className="font-medium">Tamaño de porción:</span>{" "}
+                    {(product.product_details.preparation_info as any).servingSize}
+                  </p>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Storage Info */}
+            {product.product_details?.storage_info && (
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Almacenamiento</h2>
+                <div className="space-y-2">
+                  <p>
+                    <span className="font-medium">Vida útil:</span>{" "}
+                    {(product.product_details.storage_info as any).shelfLife} días
+                  </p>
+                  <p>{(product.product_details.storage_info as any).instructions}</p>
+                </div>
+              </div>
+            )}
 
             {/* Price and Add to Cart */}
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-3xl font-bold text-foreground">
-                  ${(product.price / 100).toFixed(2)}
-                </span>
-                {product.discount && (
-                  <span className="ml-2 text-lg line-through text-muted-foreground">
-                    $
-                    {(
-                      (product.price * (100 + product.discount)) /
-                      10000
-                    ).toFixed(2)}
-                  </span>
-                )}
+            <div className="pt-6 border-t">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  {product.discount_price ? (
+                    <div className="space-y-1">
+                      <p className="text-2xl font-bold">${product.discount_price}</p>
+                      <p className="text-sm text-muted-foreground line-through">
+                        ${product.price}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-bold">${product.price}</p>
+                  )}
+                </div>
+                <Button
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={!product.is_active || product.stock_quantity === 0}
+                >
+                  {product.stock_quantity === 0
+                    ? "Sin stock"
+                    : !product.is_active
+                    ? "No disponible"
+                    : "Agregar al carrito"}
+                </Button>
               </div>
-              <Button size="lg" onClick={handleAddToCart}>
-                Agregar al Carrito
-              </Button>
             </div>
           </div>
         </div>

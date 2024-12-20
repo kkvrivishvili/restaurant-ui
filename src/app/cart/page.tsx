@@ -44,7 +44,7 @@ const formatPrice = (price: number) => {
 const CartPage = () => {
   const { items, removeFromCart, addToCart, updateQuantity, totalPrice } = useCart();
 
-  const handleRemoveFromCart = (productId: number) => {
+  const handleRemoveFromCart = (productId: string) => {
     removeFromCart(productId);
     toast({
       title: "Producto eliminado",
@@ -52,7 +52,7 @@ const CartPage = () => {
     });
   };
 
-  const handleUpdateQuantity = (productId: number, action: 'increase' | 'decrease') => {
+  const handleUpdateQuantity = (productId: string, action: 'increase' | 'decrease') => {
     const item = items.find(item => item.id === productId);
     if (!item) return;
 
@@ -95,7 +95,7 @@ const CartPage = () => {
                 >
                   <div className="relative w-24 h-24 overflow-hidden rounded-md">
                     <Image
-                      src={item.img || "/temporary/p1.png"}
+                      src={item.image_url || "/temporary/p1.png"}
                       alt={item.title}
                       fill
                       className="object-cover"

@@ -49,9 +49,9 @@ export const useAuth = () => {
 
       // Check user role
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('role')
-        .eq('id', data.user.id)
+        .eq('user_id', data.user.id)
         .single()
 
       return { data, error: null, role: profile?.role }
@@ -97,12 +97,28 @@ export const useAuth = () => {
     }
   }
 
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) throw error
+
+      return { error: null }
+    } catch (error: any) {
+      console.error('Update password error:', error)
+      return { error }
+    }
+  }
+
   return {
     user,
     loading,
     signIn,
     signUp,
     signOut,
-    resetPassword
+    resetPassword,
+    updatePassword
   }
 }
