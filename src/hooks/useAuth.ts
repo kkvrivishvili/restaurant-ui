@@ -3,40 +3,20 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import supabase from '@/utils/supabase'
-import { User } from '@supabase/supabase-js'
 
-export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null)
+export function useAuth() {
+  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setUser(session.user)
-      } else {
-        setUser(null)
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    checkUser()
-
-    return () => {
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
-
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-    } catch (error) {
-      console.error('Error checking user:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -47,17 +27,11 @@ export const useAuth = () => {
 
       if (error) throw error
 
-      // Check user role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single()
-
-      return { data, error: null, role: profile?.role }
+      router.push('/')
+      return { data, error: null }
     } catch (error: any) {
       console.error('Sign in error:', error)
-      return { data: null, error, role: null }
+      return { data: null, error }
     }
   }
 
@@ -67,9 +41,12 @@ export const useAuth = () => {
         email,
         password,
       })
+
       if (error) throw error
+
       return { data, error: null }
     } catch (error: any) {
+      console.error('Sign up error:', error)
       return { data: null, error }
     }
   }
@@ -78,21 +55,33 @@ export const useAuth = () => {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      router.push('/auth/login')
-    } catch (error) {
-      console.error('Error signing out:', error)
+      router.push('/')
+    } catch (error: any) {
+      console.error('Sign out error:', error)
     }
   }
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
-      })
+      const { error } = await supabase.auth.resetPasswordForEmail(email)
       if (error) throw error
       return { error: null }
     } catch (error: any) {
       console.error('Reset password error:', error)
+      return { error }
+    }
+  }
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) throw error
+      return { error: null }
+    } catch (error: any) {
+      console.error('Update password error:', error)
       return { error }
     }
   }
@@ -103,6 +92,7 @@ export const useAuth = () => {
     signIn,
     signUp,
     signOut,
-    resetPassword
+    resetPassword,
+    updatePassword
   }
 }

@@ -31,7 +31,7 @@ const Featured = () => {
     return null;
   }
 
-  const handleAddToCart = (productId: number, title: string) => {
+  const handleAddToCart = (productId: string, title: string) => {
     addToCart(productId);
     toast({
       title: "Producto agregado",
@@ -145,7 +145,7 @@ const Featured = () => {
                     )}
                   </div>
                   <Button
-                    onClick={() => handleAddToCart(item.id, item.title)}
+                    onClick={() => handleAddToCart(String(item.id), item.title)}
                     size="sm"
                     className="rounded-full"
                     disabled={!item.isActive || item.stock === 0}

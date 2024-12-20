@@ -30,21 +30,18 @@
 'use client';
 
 import { useCart } from "@/context/CartContext";
-import Image from "next/image";
 import React from "react";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Plus, Minus } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-
-const formatPrice = (price: number) => {
-  return `$${(price/100).toFixed(2)}`;
-};
+import { ProductImage } from '@/components/ui/product-image';
+import { formatPrice } from '@/lib/format';
 
 const CartPage = () => {
   const { items, removeFromCart, addToCart, updateQuantity, totalPrice } = useCart();
 
-  const handleRemoveFromCart = (productId: number) => {
+  const handleRemoveFromCart = (productId: string) => {
     removeFromCart(productId);
     toast({
       title: "Producto eliminado",
@@ -52,7 +49,7 @@ const CartPage = () => {
     });
   };
 
-  const handleUpdateQuantity = (productId: number, action: 'increase' | 'decrease') => {
+  const handleUpdateQuantity = (productId: string, action: 'increase' | 'decrease') => {
     const item = items.find(item => item.id === productId);
     if (!item) return;
 
@@ -93,17 +90,19 @@ const CartPage = () => {
                   className="flex items-center gap-4 p-4 bg-card rounded-lg border"
                   key={item.id}
                 >
-                  <div className="relative w-24 h-24 overflow-hidden rounded-md">
-                    <Image
-                      src={item.img || "/temporary/p1.png"}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="font-semibold text-lg text-foreground">{item.title}</h2>
-                    <p className="text-muted-foreground">{formatPrice(item.price)}</p>
+                  <div className="flex items-center space-x-4">
+                    <div className="relative h-24 w-24">
+                      <ProductImage
+                        src={item.image_url}
+                        alt={item.title}
+                        fill
+                        className="rounded-md"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-medium">{item.title}</h3>
+                      <p className="text-sm text-gray-500">{formatPrice(item.price)}</p>
+                    </div>
                   </div>
                   {/* QUANTITY CONTROLS */}
                   <div className="flex items-center gap-2">
@@ -141,20 +140,18 @@ const CartPage = () => {
           <div className="lg:w-[380px]">
             <div className="bg-card rounded-lg border p-6 space-y-4">
               <h2 className="font-semibold text-lg text-foreground">Resumen del Pedido</h2>
-              <div className="space-y-2">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal ({items.length} items)</span>
-                  <span>{formatPrice(totalPrice)}</span>
+              <div className="mt-8 space-y-4">
+                <div className="flex justify-between text-base font-medium text-gray-900">
+                  <p>Subtotal</p>
+                  <p>{formatPrice(totalPrice)}</p>
                 </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Envío</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">¡GRATIS!</span>
+                <div className="flex justify-between text-base font-medium text-gray-900">
+                  <p>Envío</p>
+                  <p>{formatPrice(0)}</p>
                 </div>
-                <div className="border-t pt-2 mt-2">
-                  <div className="flex justify-between font-medium text-foreground">
-                    <span>Total</span>
-                    <span>{formatPrice(totalPrice)}</span>
-                  </div>
+                <div className="flex justify-between text-lg font-semibold text-gray-900">
+                  <p>Total</p>
+                  <p>{formatPrice(totalPrice)}</p>
                 </div>
               </div>
               <Button className="w-full" size="lg">

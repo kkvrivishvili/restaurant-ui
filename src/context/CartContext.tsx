@@ -14,38 +14,49 @@
  * ```
  */
 
-"use client";
+'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { toast } from "@/components/ui/use-toast";
+import { useNotification } from "@/hooks/useNotification";
 import supabase from "@/utils/supabase";
 import { type Database } from "@/types/supabase";
 
-// Tipos para los items del carrito y el contexto
-type Product = Database["public"]["Tables"]["products"]["Row"];
-type CartItem = Product & { quantity: number };
+interface CartItem {
+  id: string;
+  title: string;
+  price: number;
+  quantity: number;
+  image_url?: string;
+  stock_quantity: number;
+  is_active: boolean;
+}
 
-type CartContextType = {
+interface CartContextType {
   items: CartItem[];
-  addToCart: (productId: string) => void;
+  totalItems: number;
+  totalPrice: number;
+  addToCart: (productId: string) => Promise<void>;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
-  totalItems: number;
-  totalPrice: number;
-};
+  isLoading: boolean;
+}
 
 export const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { notifyCart } = useNotification();
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   // Load cart from Supabase and localStorage on mount
   useEffect(() => {
     const loadCart = async () => {
       try {
-        // Primero intentamos cargar desde Supabase si hay un usuario autenticado
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
@@ -56,10 +67,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               products (
                 id,
                 title,
-                description,
-                image_url,
                 price,
-                discount_price,
+                image_url,
                 stock_quantity,
                 is_active
               )
@@ -77,24 +86,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Si no hay usuario o falla la carga desde Supabase, usamos localStorage como respaldo
         const savedCart = localStorage.getItem("cart");
         if (savedCart) {
           setItems(JSON.parse(savedCart));
         }
       } catch (error) {
         console.error("Error loading cart:", error);
-        toast({
-          title: "Error",
-          description: "No se pudo cargar el carrito",
-          variant: "destructive",
-        });
+        notifyCart.error("No se pudo cargar el carrito");
+      } finally {
+        setIsInitialized(true);
       }
-      setIsInitialized(true);
     };
 
     loadCart();
-  }, []);
+  }, [notifyCart]);
 
   // Save cart to Supabase and localStorage whenever it changes
   useEffect(() => {
@@ -102,19 +107,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     
     const saveCart = async () => {
       try {
-        // Guardamos en localStorage como respaldo
         localStorage.setItem("cart", JSON.stringify(items));
 
-        // Si hay un usuario autenticado, guardamos en Supabase
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          // Primero eliminamos todos los items del carrito del usuario
           await supabase
             .from('cart_items')
             .delete()
             .eq('user_id', session.user.id);
 
-          // Luego insertamos los nuevos items
           if (items.length > 0) {
             const cartItems = items.map(item => ({
               user_id: session.user.id,
@@ -122,25 +123,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               quantity: item.quantity
             }));
 
-            await supabase
-              .from('cart_items')
-              .insert(cartItems);
+            await supabase.from('cart_items').insert(cartItems);
           }
         }
       } catch (error) {
         console.error("Error saving cart:", error);
-        toast({
-          title: "Error",
-          description: "No se pudo guardar el carrito",
-          variant: "destructive",
-        });
+        notifyCart.error("No se pudo guardar el carrito");
       }
     };
 
     saveCart();
-  }, [items, isInitialized]);
+  }, [items, isInitialized, notifyCart]);
 
   const addToCart = useCallback(async (productId: string) => {
+    setIsLoading(true);
     try {
       const { data: product } = await supabase
         .from('products')
@@ -149,20 +145,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (!product) {
-        toast({
-          title: "Error",
-          description: "Producto no encontrado",
-          variant: "destructive",
-        });
+        notifyCart.error("Producto no encontrado");
         return;
       }
 
       if (!product.is_active) {
-        toast({
-          title: "Error",
-          description: "Este producto no está disponible",
-          variant: "destructive",
-        });
+        notifyCart.error("Este producto no está disponible");
         return;
       }
 
@@ -170,114 +158,84 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const existingItem = currentItems.find(item => item.id === productId);
         
         if (existingItem) {
-          // Verificar stock antes de incrementar
           if (existingItem.quantity >= product.stock_quantity) {
-            toast({
-              title: "Error",
-              description: "No hay más stock disponible",
-              variant: "destructive",
-            });
+            notifyCart.error("No hay más stock disponible");
             return currentItems;
           }
 
-          return currentItems.map(item =>
+          const updatedItems = currentItems.map(item =>
             item.id === productId
               ? { ...item, quantity: item.quantity + 1 }
               : item
           );
+          return updatedItems;
         }
         
-        return [...currentItems, { ...product, quantity: 1 }];
-      });
-
-      toast({
-        title: "Éxito",
-        description: "Producto agregado al carrito",
+        const newItem = { ...product, quantity: 1 } as CartItem;
+        return [...currentItems, newItem];
       });
     } catch (error) {
       console.error("Error adding to cart:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo agregar el producto al carrito",
-        variant: "destructive",
-      });
+      notifyCart.error("No se pudo agregar el producto al carrito");
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [notifyCart]);
 
   const removeFromCart = useCallback((productId: string) => {
     setItems(currentItems => {
+      const item = currentItems.find(item => item.id === productId);
+      if (item) {
+        setTimeout(() => notifyCart.itemRemoved(item.title), 0);
+      }
       return currentItems.filter(item => item.id !== productId);
     });
+  }, [notifyCart]);
 
-    toast({
-      title: "Éxito",
-      description: "Producto eliminado del carrito",
-    });
-  }, []);
-
-  const updateQuantity = useCallback(async (productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity < 0) return;
 
-    try {
-      // Verificar stock disponible
-      const { data: product } = await supabase
-        .from('products')
-        .select('stock_quantity')
-        .eq('id', productId)
-        .single();
+    setItems(currentItems => {
+      const item = currentItems.find(item => item.id === productId);
+      if (!item) return currentItems;
 
-      if (product && quantity > product.stock_quantity) {
-        toast({
-          title: "Error",
-          description: "No hay suficiente stock disponible",
-          variant: "destructive",
-        });
-        return;
+      if (quantity > item.stock_quantity) {
+        setTimeout(() => notifyCart.error("No hay suficiente stock disponible"), 0);
+        return currentItems;
       }
 
-      setItems(currentItems => {
-        return currentItems.map(item =>
-          item.id === productId
-            ? { ...item, quantity }
-            : item
-        ).filter(item => item.quantity > 0);
-      });
-    } catch (error) {
-      console.error("Error updating quantity:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la cantidad",
-        variant: "destructive",
-      });
-    }
-  }, []);
+      if (quantity === 0) {
+        return currentItems.filter(item => item.id !== productId);
+      }
+
+      const updatedItems = currentItems.map(item =>
+        item.id === productId
+          ? { ...item, quantity }
+          : item
+      );
+
+      setTimeout(() => notifyCart.quantityUpdated(item.title, quantity), 0);
+      return updatedItems;
+    });
+  }, [notifyCart]);
 
   const clearCart = useCallback(() => {
     setItems([]);
-    toast({
-      title: "Éxito",
-      description: "Carrito vaciado",
-    });
   }, []);
 
-  const totalItems = items.reduce((total, item) => total + item.quantity, 0);
-  const totalPrice = items.reduce((total, item) => {
-    const price = item.discount_price || item.price;
-    return total + (price * item.quantity);
-  }, 0);
+  const value = {
+    items,
+    totalItems,
+    totalPrice,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    isLoading
+  };
 
   return (
-    <CartContext.Provider
-      value={{
-        items,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        totalItems,
-        totalPrice,
-      }}
-    >
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

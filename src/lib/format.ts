@@ -17,8 +17,13 @@
  * - Considera usar Intl.NumberFormat para internacionalización
  */
 
-export const formatPrice = (price: number): string => {
-  return `$${(price/100).toFixed(2)}`;
+export const formatPrice = (price: number | null | undefined): string => {
+  if (price == null) return "$0.00";
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2
+  }).format(price/100);
 };
 
 export const formatNumber = (num: number, padLength: number = 2): string => {
