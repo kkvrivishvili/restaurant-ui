@@ -59,13 +59,12 @@ import { Container } from "@/components/ui/container";
 
 const Navbar = () => {
   const pathname = usePathname();
-  
+  const { totalItems } = useCart();
+
   // No mostrar el navbar en las rutas de admin
   if (pathname?.startsWith('/admin')) {
     return null;
   }
-
-  const { totalItems } = useCart();
 
   return (
     <div className="sticky top-0 z-50 w-full border-b border-[hsl(var(--border))] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
