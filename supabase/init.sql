@@ -13,12 +13,13 @@ GRANT ALL ON SCHEMA public TO public;
 
 -- ENUMS
 CREATE TYPE user_role AS ENUM ('admin', 'customer');
-CREATE TYPE order_status AS ENUM ('pending', 'processing', 'shipped', 'delivered', 'cancelled');
+CREATE TYPE order_status AS ENUM ('pending', 'pending_payment', 'processing', 'shipped', 'delivered', 'cancelled', 'payment_failed', 'refunded');
 CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
 CREATE TYPE payment_method AS ENUM ('credit_card', 'debit_card', 'transfer', 'cash');
 CREATE TYPE review_status AS ENUM ('pending', 'approved', 'rejected');
 CREATE TYPE meal_tag AS ENUM ('new-arrival', 'featured', 'seasonal', 'bestseller', 'promotion', 'popular');
 CREATE TYPE side_dish AS ENUM ('roasted-vegetables', 'mashed-potatoes', 'quinoa', 'rice');
+CREATE TYPE payment_provider AS ENUM ('mercadopago', 'stripe', 'paypal');
 
 -- USER PROFILES
 CREATE TABLE user_profiles (
@@ -61,6 +62,7 @@ CREATE TABLE products (
     category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
     is_active BOOLEAN DEFAULT true,
     stock_quantity INTEGER DEFAULT 0,
+    blocked_stock INTEGER DEFAULT 0,
     rating DECIMAL(3,2) DEFAULT 0,
     reviews_count INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -113,9 +115,10 @@ CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id),
     status order_status DEFAULT 'pending',
-    payment_status payment_status DEFAULT 'pending',
-    payment_method payment_method,
     total_amount DECIMAL(10,2) NOT NULL,
+    items JSONB NOT NULL DEFAULT '[]',
+    payment_method payment_method,
+    provider_preference_id VARCHAR(255),
     shipping_address JSONB NOT NULL,
     billing_address JSONB,
     notes TEXT,
@@ -176,6 +179,50 @@ CREATE TABLE wishlist_items (
     UNIQUE(wishlist_id, product_id)
 );
 
+-- PAYMENTS
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
+    provider payment_provider NOT NULL,
+    provider_payment_id VARCHAR(255),
+    provider_preference_id VARCHAR(255),
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'ARS',
+    status payment_status DEFAULT 'pending',
+    payment_method payment_method,
+    payment_data JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- PAYMENT STATUS HISTORY
+CREATE TABLE payment_status_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payment_id UUID REFERENCES payments(id) ON DELETE CASCADE,
+    status payment_status NOT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- STOCK BLOCKS
+CREATE TABLE stock_blocks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+    order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Crear índices para mejorar el rendimiento
+CREATE INDEX payments_order_id_idx ON payments(order_id);
+CREATE INDEX payments_provider_payment_id_idx ON payments(provider_payment_id);
+CREATE INDEX payments_provider_preference_id_idx ON payments(provider_preference_id);
+CREATE INDEX payments_status_idx ON payments(status);
+CREATE INDEX payment_status_history_payment_id_idx ON payment_status_history(payment_id);
+CREATE INDEX payment_status_history_status_idx ON payment_status_history(status);
+
 -- SETTINGS
 CREATE TABLE settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -198,6 +245,55 @@ ALTER TABLE reviews DISABLE ROW LEVEL SECURITY;
 ALTER TABLE wishlists DISABLE ROW LEVEL SECURITY;
 ALTER TABLE wishlist_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE payments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_status_history DISABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_blocks DISABLE ROW LEVEL SECURITY;
+
+-- Enable Row Level Security
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_status_history ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para pagos
+CREATE POLICY "Allow users to view their own payments"
+    ON payments
+    FOR SELECT
+    USING (
+        order_id IN (
+            SELECT id FROM orders WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Allow authenticated users to create payments"
+    ON payments
+    FOR INSERT
+    WITH CHECK (
+        order_id IN (
+            SELECT id FROM orders WHERE user_id = auth.uid()
+        )
+    );
+
+-- Políticas para historial de estados
+CREATE POLICY "Allow users to view their payment history"
+    ON payment_status_history
+    FOR SELECT
+    USING (
+        payment_id IN (
+            SELECT p.id FROM payments p
+            JOIN orders o ON p.order_id = o.id
+            WHERE o.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Allow system to create payment history"
+    ON payment_status_history
+    FOR INSERT
+    WITH CHECK (
+        payment_id IN (
+            SELECT p.id FROM payments p
+            JOIN orders o ON p.order_id = o.id
+            WHERE o.user_id = auth.uid()
+        )
+    );
 
 -- Grant public access to tables
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
@@ -280,6 +376,21 @@ CREATE TRIGGER update_settings_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_payments_updated_at
+    BEFORE UPDATE ON payments
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_payment_status_history_updated_at
+    BEFORE UPDATE ON payment_status_history
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_stock_blocks_updated_at
+    BEFORE UPDATE ON stock_blocks
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_product_metrics
     AFTER INSERT OR UPDATE OR DELETE ON reviews
     FOR EACH ROW
@@ -311,30 +422,30 @@ INSERT INTO categories (id, name, slug, description, color, icon, is_active, dis
   (gen_random_uuid(), 'Bajo en Carbohidratos', 'lowCarb', 'Ideal para dietas bajas en carbohidratos', 'bg-purple-500', 'wheat-off', true, 4);
 
 -- Insert products
-INSERT INTO products (id, title, description, image_url, price, category_id, is_active, stock_quantity, rating, reviews_count) VALUES
+INSERT INTO products (id, title, description, image_url, price, category_id, is_active, stock_quantity, blocked_stock, rating, reviews_count) VALUES
   -- Proteína
-  (gen_random_uuid(), 'Pollo al Limón con Quinoa', 'Pechuga de pollo jugosa marinada en limón, acompañada de quinoa y vegetales al vapor', '/temporary/p1.png', 5500, (SELECT id FROM categories WHERE slug = 'protein'), true, 15, 4.8, 256),
-  (gen_random_uuid(), 'Salmón Teriyaki con Arroz Integral', 'Filete de salmón glaseado con salsa teriyaki casera y arroz integral con vegetales', '/temporary/p3.png', 7899, (SELECT id FROM categories WHERE slug = 'protein'), true, 12, 4.9, 124),
-  (gen_random_uuid(), 'Atún a la Plancha con Quinoa', 'Filete de atún fresco a la plancha con ensalada de quinoa y vegetales asados', '/temporary/p7.png', 3799, (SELECT id FROM categories WHERE slug = 'protein'), true, 8, 4.7, 98),
-  (gen_random_uuid(), 'Bowl de Huevo y Aguacate', 'Bowl proteico con huevos pochados, aguacate, espinacas y pan integral', '/temporary/p8.png', 2199, (SELECT id FROM categories WHERE slug = 'protein'), true, 20, 4.6, 167),
+  (gen_random_uuid(), 'Pollo al Limón con Quinoa', 'Pechuga de pollo jugosa marinada en limón, acompañada de quinoa y vegetales al vapor', '/temporary/p1.png', 5500, (SELECT id FROM categories WHERE slug = 'protein'), true, 15, 0, 4.8, 256),
+  (gen_random_uuid(), 'Salmón Teriyaki con Arroz Integral', 'Filete de salmón glaseado con salsa teriyaki casera y arroz integral con vegetales', '/temporary/p3.png', 7899, (SELECT id FROM categories WHERE slug = 'protein'), true, 12, 0, 4.9, 124),
+  (gen_random_uuid(), 'Atún a la Plancha con Quinoa', 'Filete de atún fresco a la plancha con ensalada de quinoa y vegetales asados', '/temporary/p7.png', 3799, (SELECT id FROM categories WHERE slug = 'protein'), true, 8, 0, 4.7, 98),
+  (gen_random_uuid(), 'Bowl de Huevo y Aguacate', 'Bowl proteico con huevos pochados, aguacate, espinacas y pan integral', '/temporary/p8.png', 2199, (SELECT id FROM categories WHERE slug = 'protein'), true, 20, 0, 4.6, 167),
 
   -- Bajo en Carbohidratos
-  (gen_random_uuid(), 'Pavo al Romero con Puré de Coliflor', 'Pechuga de pavo marinada con romero y puré cremoso de coliflor bajo en carbohidratos', '/temporary/p5.png', 2599, (SELECT id FROM categories WHERE slug = 'lowCarb'), true, 18, 4.5, 78),
-  (gen_random_uuid(), 'Ensalada Keto de Pollo', 'Ensalada keto con pollo, aguacate, huevo y aderezo ranch casero', '/temporary/p9.png', 4399, (SELECT id FROM categories WHERE slug = 'lowCarb'), true, 15, 4.4, 92),
-  (gen_random_uuid(), 'Bowl Mediterráneo Low-Carb', 'Bowl mediterráneo con atún, aceitunas, pepino y humus de aguacate', '/temporary/p10.png', 1699, (SELECT id FROM categories WHERE slug = 'lowCarb'), true, 10, 4.6, 85),
-  (gen_random_uuid(), 'Pollo a la Parrilla Keto', 'Pollo a la parrilla con vegetales asados y salsa de mantequilla con hierbas', '/temporary/p11.png', 499, (SELECT id FROM categories WHERE slug = 'lowCarb'), true, 12, 4.7, 103),
+  (gen_random_uuid(), 'Pavo al Romero con Puré de Coliflor', 'Pechuga de pavo marinada con romero y puré cremoso de coliflor bajo en carbohidratos', '/temporary/p5.png', 2599, (SELECT id FROM categories WHERE slug = 'lowCarb'), true, 18, 0, 4.5, 78),
+  (gen_random_uuid(), 'Ensalada Keto de Pollo', 'Ensalada keto con pollo, aguacate, huevo y aderezo ranch casero', '/temporary/p9.png', 4399, (SELECT id FROM categories WHERE slug = 'lowCarb'), true, 15, 0, 4.4, 92),
+  (gen_random_uuid(), 'Bowl Mediterráneo Low-Carb', 'Bowl mediterráneo con atún, aceitunas, pepino y humus de aguacate', '/temporary/p10.png', 1699, (SELECT id FROM categories WHERE slug = 'lowCarb'), true, 10, 0, 4.6, 85),
+  (gen_random_uuid(), 'Pollo a la Parrilla Keto', 'Pollo a la parrilla con vegetales asados y salsa de mantequilla con hierbas', '/temporary/p11.png', 499, (SELECT id FROM categories WHERE slug = 'lowCarb'), true, 12, 0, 4.7, 103),
 
   -- Vegano
-  (gen_random_uuid(), 'Bowl Vegano de Quinoa y Garbanzos', 'Bowl proteico vegano con quinoa, garbanzos especiados, aguacate y vegetales asados', '/temporary/p4.png', 2399, (SELECT id FROM categories WHERE slug = 'vegan'), true, 5, 4.7, 92),
-  (gen_random_uuid(), 'Curry de Garbanzos y Espinacas', 'Curry aromático de garbanzos con espinacas y arroz basmati integral', '/temporary/p12.png', 2199, (SELECT id FROM categories WHERE slug = 'vegan'), true, 14, 4.5, 76),
-  (gen_random_uuid(), 'Buddha Bowl Vegano', 'Bowl vegano con tempeh marinado, quinoa, vegetales asados y salsa tahini', '/temporary/p13.png', 2599, (SELECT id FROM categories WHERE slug = 'vegan'), true, 8, 4.8, 112),
-  (gen_random_uuid(), 'Pasta de Lentejas con Champiñones', 'Pasta de lentejas con salsa de champiñones y espinacas', '/temporary/p14.png', 6299, (SELECT id FROM categories WHERE slug = 'vegan'), true, 16, 4.6, 89),
+  (gen_random_uuid(), 'Bowl Vegano de Quinoa y Garbanzos', 'Bowl proteico vegano con quinoa, garbanzos especiados, aguacate y vegetales asados', '/temporary/p4.png', 2399, (SELECT id FROM categories WHERE slug = 'vegan'), true, 5, 0, 4.7, 92),
+  (gen_random_uuid(), 'Curry de Garbanzos y Espinacas', 'Curry aromático de garbanzos con espinacas y arroz basmati integral', '/temporary/p12.png', 2199, (SELECT id FROM categories WHERE slug = 'vegan'), true, 14, 0, 4.5, 76),
+  (gen_random_uuid(), 'Buddha Bowl Vegano', 'Bowl vegano con tempeh marinado, quinoa, vegetales asados y salsa tahini', '/temporary/p13.png', 2599, (SELECT id FROM categories WHERE slug = 'vegan'), true, 8, 0, 4.8, 112),
+  (gen_random_uuid(), 'Pasta de Lentejas con Champiñones', 'Pasta de lentejas con salsa de champiñones y espinacas', '/temporary/p14.png', 6299, (SELECT id FROM categories WHERE slug = 'vegan'), true, 16, 0, 4.6, 89),
 
   -- Vegetariano
-  (gen_random_uuid(), 'Bowl Vegetariano de Lentejas', 'Bowl nutritivo de lentejas, arroz integral, vegetales asados y hummus casero', '/temporary/p2.png', 2299, (SELECT id FROM categories WHERE slug = 'vegetarian'), true, 8, 4.6, 89),
-  (gen_random_uuid(), 'Curry Vegetariano de Garbanzos', 'Curry aromático de garbanzos con espinacas y arroz basmati integral', '/temporary/p6.png', 2199, (SELECT id FROM categories WHERE slug = 'vegetarian'), true, 10, 4.4, 65),
-  (gen_random_uuid(), 'Lasaña de Vegetales', 'Lasaña de berenjena y calabacín con ricotta y salsa de tomate casera', '/temporary/p15.png', 2499, (SELECT id FROM categories WHERE slug = 'vegetarian'), true, 6, 4.7, 94),
-  (gen_random_uuid(), 'Risotto de Hongos', 'Risotto cremoso de hongos silvestres con queso parmesano y espárragos', '/temporary/p16.png', 2699, (SELECT id FROM categories WHERE slug = 'vegetarian'), true, 9, 4.8, 108);
+  (gen_random_uuid(), 'Bowl Vegetariano de Lentejas', 'Bowl nutritivo de lentejas, arroz integral, vegetales asados y hummus casero', '/temporary/p2.png', 2299, (SELECT id FROM categories WHERE slug = 'vegetarian'), true, 8, 0, 4.6, 89),
+  (gen_random_uuid(), 'Curry Vegetariano de Garbanzos', 'Curry aromático de garbanzos con espinacas y arroz basmati integral', '/temporary/p6.png', 2199, (SELECT id FROM categories WHERE slug = 'vegetarian'), true, 10, 0, 4.4, 65),
+  (gen_random_uuid(), 'Lasaña de Vegetales', 'Lasaña de berenjena y calabacín con ricotta y salsa de tomate casera', '/temporary/p15.png', 2499, (SELECT id FROM categories WHERE slug = 'vegetarian'), true, 6, 0, 4.7, 94),
+  (gen_random_uuid(), 'Risotto de Hongos', 'Risotto cremoso de hongos silvestres con queso parmesano y espárragos', '/temporary/p16.png', 2699, (SELECT id FROM categories WHERE slug = 'vegetarian'), true, 9, 0, 4.8, 108);
 
 -- Insert product details for each product
 INSERT INTO product_details (product_id, nutritional_info, preparation_info, storage_info, dietary_info)

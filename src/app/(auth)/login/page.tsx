@@ -1,105 +1,152 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Icons } from "@/components/ui/icons"
+import { toast } from "@/components/ui/use-toast"
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const { signIn } = useAuth()
+  const searchParams = useSearchParams()
+  const { signIn, user } = useAuth()
+
+  // Obtener la URL de redirección si existe
+  const redirect = searchParams.get('redirect') || '/'
+
+  // Si el usuario ya está autenticado, redirigir
+  useEffect(() => {
+    if (user) {
+      router.push(redirect)
+    }
+  }, [user, router, redirect])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const { error, role } = await signIn(email, password)
+      setIsLoading(true)
+      const { error } = await signIn(email, password)
+      
       if (error) throw error
 
-      // Redirect based on user role
-      if (role === 'admin') {
-        router.push('/admin/dashboard')
-      } else {
-        router.push('/dashboard')
-      }
+      toast({
+        title: "¡Bienvenido!",
+        description: "Has iniciado sesión correctamente",
+      })
+
+      // Redirigir al usuario a la página original
+      router.push(redirect)
+      
     } catch (error: any) {
-      setError(error.message)
+      toast({
+        title: "Error al iniciar sesión",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
-          </h2>
+    <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
+        <div className="absolute inset-0 bg-zinc-900" />
+        <div className="relative z-20 flex items-center text-lg font-medium">
+          <Icons.logo className="mr-2 h-6 w-6" />
+          <span className="font-bold">Vera</span>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
-            </div>
-          )}
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+        <div className="relative z-20 mt-auto">
+          <blockquote className="space-y-2">
+            <p className="text-lg">
+              "Esta plataforma ha transformado la manera en que compro productos artesanales.
+              La calidad y autenticidad de cada pieza es excepcional."
+            </p>
+            <footer className="text-sm">Sofia Rodríguez</footer>
+          </blockquote>
+        </div>
+      </div>
+      <div className="lg:p-8">
+        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+          <div className="flex items-center justify-center lg:hidden">
+            <Icons.logo className="h-6 w-6 mr-2" />
+            <span className="font-bold">Vera</span>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="text-sm">
-              <Link href="/auth/reset-password" className="font-medium text-indigo-600 hover:text-indigo-500">
-                Forgot your password?
-              </Link>
-            </div>
-            <div className="text-sm">
-              <Link href="/auth/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
-                Don&apos;t have an account? Sign up
-              </Link>
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Sign in
-            </button>
-          </div>
-        </form>
+          <Card>
+            <CardHeader>
+              <CardTitle>Iniciar Sesión</CardTitle>
+              <CardDescription>
+                Ingresa tus credenciales para acceder a tu cuenta
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleLogin}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    placeholder="nombre@ejemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Contraseña
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter className="flex flex-col space-y-4">
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading && (
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Iniciar Sesión
+                </Button>
+                <div className="flex items-center justify-between w-full text-sm">
+                  <Link 
+                    href="/reset-password"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                  <Link 
+                    href="/signup"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Crear cuenta
+                  </Link>
+                </div>
+              </CardFooter>
+            </form>
+          </Card>
+        </div>
       </div>
     </div>
   )

@@ -6,6 +6,7 @@
  * - Control de cantidad por producto
  * - Cálculo de subtotal y total
  * - Mensaje cuando el carrito está vacío
+ * - Procesar pago con MercadoPago
  * 
  * Hooks y Context:
  * - useCart: Provee funcionalidades del carrito (@/context/CartContext.tsx)
@@ -30,19 +31,24 @@
 'use client';
 
 import { useCart } from "@/context/CartContext";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import React from "react";
+import React, { useState } from "react";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Plus, Minus } from "lucide-react";
+import { ShoppingBag, Plus, Minus, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const formatPrice = (price: number) => {
   return `$${(price/100).toFixed(2)}`;
 };
 
 const CartPage = () => {
+  const router = useRouter();
+  const { user } = useAuth();
   const { items, removeFromCart, addToCart, updateQuantity, totalPrice } = useCart();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRemoveFromCart = (productId: string) => {
     removeFromCart(productId);
@@ -72,6 +78,69 @@ const CartPage = () => {
           description: `${item.title} (${item.quantity - 1}x)`,
         });
       }
+    }
+  };
+
+  const handleCheckout = async () => {
+    try {
+      if (!user) {
+        // Redirigir a login si no está autenticado
+        router.push('/login?redirect=/cart');
+        return;
+      }
+
+      setIsProcessing(true);
+
+      // Log de los items antes de enviar
+      console.log('Items to send:', items.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        image_url: item.image_url,
+        category: item.category,
+        quantity: item.quantity,
+        price: item.price
+      })));
+
+      const response = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: items.map(item => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            image_url: item.image_url,
+            category: item.category,
+            quantity: item.quantity,
+            price: item.price
+          }))
+        }),
+      });
+
+      const result = await response.json();
+      
+      // Log de la respuesta
+      console.log('API Response:', result);
+
+      if (!result.success || !result.data?.init_point) {
+        throw new Error(result.error || 'Error al procesar el pago');
+      }
+
+      // Redirigir a la página de pago de MercadoPago
+      window.location.href = result.data.init_point;
+
+    } catch (error) {
+      console.error('Error initiating checkout:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Error al procesar el pago',
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -157,8 +226,20 @@ const CartPage = () => {
                   </div>
                 </div>
               </div>
-              <Button className="w-full" size="lg">
-                Proceder al Pago
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={handleCheckout}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  'Proceder al Pago'
+                )}
               </Button>
             </div>
           </div>

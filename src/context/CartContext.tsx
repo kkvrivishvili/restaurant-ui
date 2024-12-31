@@ -6,11 +6,12 @@
  * - Agregar/remover productos
  * - Calcular totales
  * - Notificaciones usando el sistema toast de Radix UI
+ * - Iniciar proceso de checkout
  *
  * Uso:
  * ```tsx
  * // En un componente:
- * const { items, addToCart, removeFromCart } = useCart();
+ * const { items, addToCart, removeFromCart, initiateCheckout } = useCart();
  * ```
  */
 
@@ -33,6 +34,8 @@ type CartContextType = {
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
+  initiateCheckout: () => Promise<{ success: boolean; checkoutUrl?: string; error?: string }>;
+  isProcessingPayment: boolean;
 };
 
 export const CartContext = createContext<CartContextType | null>(null);
@@ -40,6 +43,7 @@ export const CartContext = createContext<CartContextType | null>(null);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Load cart from Supabase and localStorage on mount
   useEffect(() => {
@@ -255,6 +259,84 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Función para iniciar el proceso de checkout
+  const initiateCheckout = async () => {
+    try {
+      setIsProcessingPayment(true);
+
+      // Verificar autenticación
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error('Debes iniciar sesión para realizar el pago');
+      }
+
+      // Verificar que hay items en el carrito
+      if (items.length === 0) {
+        throw new Error('El carrito está vacío');
+      }
+
+      // Crear orden
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: session.user.id,
+          status: 'pending',
+          total_amount: totalPrice,
+          items: items.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity,
+            unit_price: item.price,
+            total_price: item.price * item.quantity
+          }))
+        })
+        .select()
+        .single();
+
+      if (orderError || !order) {
+        throw new Error('Error al crear la orden');
+      }
+
+      // Iniciar el pago
+      const response = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: items.map(item => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            image_url: item.image_url,
+            quantity: item.quantity,
+            unit_price: item.price,
+            category: item.category
+          })),
+          orderId: order.id
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success || !result.data?.init_point) {
+        throw new Error(result.error || 'Error al crear el pago');
+      }
+
+      return {
+        success: true,
+        checkoutUrl: result.data.init_point
+      };
+    } catch (error) {
+      console.error('Error initiating checkout:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error al iniciar el checkout'
+      };
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   const totalItems = items.reduce((total, item) => total + item.quantity, 0);
   const totalPrice = items.reduce((total, item) => {
     const price = item.discount_price || item.price;
@@ -262,17 +344,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, 0);
 
   return (
-    <CartContext.Provider
-      value={{
-        items,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        totalItems,
-        totalPrice,
-      }}
-    >
+    <CartContext.Provider value={{
+      items,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      totalItems,
+      totalPrice,
+      initiateCheckout,
+      isProcessingPayment
+    }}>
       {children}
     </CartContext.Provider>
   );

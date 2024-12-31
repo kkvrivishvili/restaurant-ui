@@ -140,43 +140,43 @@ export interface Database {
       }
       orders: {
         Row: {
-          billing_address: Json | null
-          created_at: string
           id: string
-          notes: string | null
-          payment_method: Database["public"]["Enums"]["payment_method"] | null
-          payment_status: Database["public"]["Enums"]["payment_status"]
-          shipping_address: Json
-          status: Database["public"]["Enums"]["order_status"]
+          user_id: string
+          status: 'pending' | 'pending_payment' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'payment_failed' | 'refunded'
           total_amount: number
+          payment_method?: string
+          provider_preference_id?: string
+          shipping_address: Json
+          billing_address?: Json
+          notes?: string
+          created_at: string
           updated_at: string
-          user_id: string | null
         }
         Insert: {
-          billing_address?: Json | null
-          created_at?: string
           id?: string
-          notes?: string | null
-          payment_method?: Database["public"]["Enums"]["payment_method"] | null
-          payment_status?: Database["public"]["Enums"]["payment_status"]
-          shipping_address: Json
-          status?: Database["public"]["Enums"]["order_status"]
+          user_id: string
+          status?: 'pending' | 'pending_payment' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'payment_failed' | 'refunded'
           total_amount: number
+          payment_method?: string
+          provider_preference_id?: string
+          shipping_address: Json
+          billing_address?: Json
+          notes?: string
+          created_at?: string
           updated_at?: string
-          user_id?: string | null
         }
         Update: {
-          billing_address?: Json | null
-          created_at?: string
           id?: string
-          notes?: string | null
-          payment_method?: Database["public"]["Enums"]["payment_method"] | null
-          payment_status?: Database["public"]["Enums"]["payment_status"]
-          shipping_address?: Json
-          status?: Database["public"]["Enums"]["order_status"]
+          user_id?: string
+          status?: 'pending' | 'pending_payment' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'payment_failed' | 'refunded'
           total_amount?: number
+          payment_method?: string
+          provider_preference_id?: string
+          shipping_address?: Json
+          billing_address?: Json
+          notes?: string
+          created_at?: string
           updated_at?: string
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -184,6 +184,91 @@ export interface Database {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      payments: {
+        Row: {
+          id: string
+          order_id: string
+          provider: string
+          provider_payment_id?: string
+          provider_preference_id?: string
+          amount: number
+          currency: string
+          status: 'pending' | 'completed' | 'failed' | 'refunded'
+          payment_method?: string
+          payment_data: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          provider: string
+          provider_payment_id?: string
+          provider_preference_id?: string
+          amount: number
+          currency: string
+          status?: 'pending' | 'completed' | 'failed' | 'refunded'
+          payment_method?: string
+          payment_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          provider?: string
+          provider_payment_id?: string
+          provider_preference_id?: string
+          amount?: number
+          currency?: string
+          status?: 'pending' | 'completed' | 'failed' | 'refunded'
+          payment_method?: string
+          payment_data?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      payment_status_history: {
+        Row: {
+          id: string
+          payment_id: string
+          status: 'pending' | 'completed' | 'failed' | 'refunded'
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          payment_id: string
+          status: 'pending' | 'completed' | 'failed' | 'refunded'
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          payment_id?: string
+          status?: 'pending' | 'completed' | 'failed' | 'refunded'
+          metadata?: Json
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_status_history_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           }
         ]
